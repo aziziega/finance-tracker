@@ -58,8 +58,8 @@ export function RecentTransactions() {
         <div className="space-y-8">
             {transactions.map((transaction) => (
                 <div key={transaction.id} className="flex items-center">
-                    <Avatar className="h-9 w-9 border">
-                        <transaction.icon className="h-4 w-4" />
+                    <Avatar className="h-9 w-9 border flex items-center justify-center">
+                        <transaction.icon className="h-4 w-4 " />
                     </Avatar>
                     <div className="ml-4 space-y-1">
                         <p className="text-sm font-medium leading-none">{transaction.description}</p>

@@ -1,24 +1,12 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+"use client";
+
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { HeroHeader } from "@/components/header";
-import React from "react";
+import React, { use } from "react";
+import { AuthProvider } from "@/components/context/AuthProvider";
+import { Toaster } from "sonner"; // 
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Finance Tracker",
-  description: "Track your finances with ease",
-};
 
 export default function RootLayout({
   children,
@@ -28,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
       >
         <ThemeProvider
           attribute="class"
@@ -37,9 +25,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <HeroHeader />
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+          <Toaster position="top-right" />
         </ThemeProvider>
       </body>
-    </html>
+    </html >
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { use, useState, useEffect } from "react";
+import React, { use, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,9 +11,12 @@ import { AccountSummary } from "@/components/account/account-summary";
 import { LoansOverview } from "@/components/overview/loans-overview";
 import { SavingsOverview } from "@/components/overview/savings-overview";
 import { FinancialGoals } from "@/components/goal/financial-goals";
+import client from "@/api/client";
+
 
 
 export default function DashboardPreview() {
+
 
     const [showTransaction, setShowTransaction] = useState(false)
     return (
@@ -25,7 +28,13 @@ export default function DashboardPreview() {
                         <Plus className="mr-2 h-4 w-4" />
                         Add Transaction
                     </Button>
-
+                    <Button
+                        onClick={() => {
+                            client.auth.signOut();
+                        }}
+                    >
+                        SignOut
+                    </Button>
                 </div>
                 {showTransaction && (
                     <Card className="mb-4">
@@ -121,4 +130,5 @@ export default function DashboardPreview() {
             </main>
         </div>
     );
+
 }
