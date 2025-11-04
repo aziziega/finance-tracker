@@ -4,14 +4,14 @@ import useAuth from '@/hooks/useAuth'
 import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 
-const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
+const AuthPagesLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, loading } = useAuth() || {};
     const router = useRouter();
 
     useEffect(() => {
-
-        if (!loading && !user) {
-            router.push('/'); // Redirect to home page if not authenticated
+        // ✅ Kalau user sudah login, redirect ke dashboard
+        if (!loading && user) {
+            router.push('/dashboard');
         }
     }, [user, loading, router]);
 
@@ -24,11 +24,12 @@ const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
         );
     }
 
-    // Not authenticated
-    if (!user) {
+    // Already authenticated - akan redirect via useEffect
+    if (user) {
         return null;
     }
 
+    // Not authenticated - show auth pages
     return (
         <div>
             {children}
@@ -36,4 +37,4 @@ const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
     )
 }
 
-export default PrivatePagesLayout;
+export default AuthPagesLayout;

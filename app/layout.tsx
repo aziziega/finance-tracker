@@ -24,8 +24,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <HeroHeader />
           <AuthProvider>
+            <HeroHeader />
             {children}
           </AuthProvider>
           <Toaster position="top-right" />

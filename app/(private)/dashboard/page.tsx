@@ -11,8 +11,6 @@ import { AccountSummary } from "@/components/account/account-summary";
 import { LoansOverview } from "@/components/overview/loans-overview";
 import { SavingsOverview } from "@/components/overview/savings-overview";
 import { FinancialGoals } from "@/components/goal/financial-goals";
-import client from "@/api/client";
-
 
 
 export default function DashboardPreview() {
@@ -28,13 +26,13 @@ export default function DashboardPreview() {
                         <Plus className="mr-2 h-4 w-4" />
                         Add Transaction
                     </Button>
-                    <Button
+                    {/* <Button
                         onClick={() => {
                             client.auth.signOut();
                         }}
                     >
                         SignOut
-                    </Button>
+                    </Button> */}
                 </div>
                 {showTransaction && (
                     <Card className="mb-4">

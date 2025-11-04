@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,15 +19,34 @@ interface AddTransactionFormProps {
   onComplete: () => void
 }
 
-export function FormTransaction({ onComplete }: AddTransactionFormProps) {
+export async function FormTransaction({ onComplete }: AddTransactionFormProps) {
   const [date, setDate] = useState<Date>(new Date())
   const [transactionType, setTransactionType] = useState("expense")
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories')
+        const data = await response.json()
+
+        console.log('API Response:', data) // Debug
+
+        setCategories(data.categories || []) // ✅ Ambil property 'categories'
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        setCategories([])
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Here you would handle the form submission, like saving to a database
     // For now, we'll just call onComplete to close the form
-    
+
     onComplete()
   }
 
@@ -95,16 +114,13 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
             <SelectContent>
               {transactionType === "expense" ? (
                 <>
-                  <SelectItem value="food">Food & Dining</SelectItem>
-                  <SelectItem value="housing">Housing</SelectItem>
-                  <SelectItem value="transportation">Transportation</SelectItem>
-                  <SelectItem value="utilities">Utilities</SelectItem>
-                  <SelectItem value="entertainment">Entertainment</SelectItem>
-                  <SelectItem value="healthcare">Healthcare</SelectItem>
-                  <SelectItem value="shopping">Shopping</SelectItem>
-                  <SelectItem value="personal">Personal Care</SelectItem>
-                  <SelectItem value="debt">Debt Payments</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  {categories
+                    .map((category: any) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  }
                 </>
               ) : transactionType === "income" ? (
                 <>
