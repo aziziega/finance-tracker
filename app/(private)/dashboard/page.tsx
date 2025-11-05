@@ -22,7 +22,7 @@ export default function DashboardPreview() {
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 sm:gap-6 md:p-8 sm:p-6 p-4 mt-20">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold tracking-tight">Finance Dashboard</h1>
-                    <Button onClick={() => setShowTransaction(!showTransaction)}>
+                    <Button className="cursor-pointer" onClick={() => setShowTransaction(!showTransaction)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Transaction
                     </Button>

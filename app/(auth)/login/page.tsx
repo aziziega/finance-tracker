@@ -115,7 +115,7 @@ export default function LoginPage() {
                                 />
                             </div>
 
-                            <Button className="w-full" type="submit" disabled={isLoading}>{isLoading ? 'Signing In...' : 'Login'}</Button>
+                            <Button className="w-full cursor-pointer" type="submit" disabled={isLoading}>{isLoading ? 'Signing In...' : 'Login'}</Button>
                         </div>
 
                         <div className="my-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
