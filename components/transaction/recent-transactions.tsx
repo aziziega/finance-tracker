@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+
 import { ArrowDownIcon, ShoppingBag, Home, Car, Coffee, Utensils } from "lucide-react"
 
 const transactions = [

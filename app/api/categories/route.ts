@@ -3,33 +3,76 @@ import { createClient } from '@/utils/supabase/server'
 
 export async function GET() {
   try {
-    const supabase = createClient() 
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    
-    const { data: categories, error } = await (await supabase)
-      .from('categories') 
+    let query = supabase
+      .from('categories')
       .select('*')
+      
+      // Query logic
+      if(user) {
+        // Logged in user: system categories + their custom categories
+        query = query.or(`is_system.eq.true,user_id.eq.${user.id}`)
+      } else {
+        // Not logged in: only system categories
+        query = query.eq('is_system', true)
+      }
+
+      const { data: categories, error } = await query
+      .order('is_system', { ascending: false })
       .order('name', { ascending: true })
 
     if (error) {
-      console.error('Database error:', error)
+      console.log('Database error:', error)
       return NextResponse.json({ 
-        error: error.message,
-        categories: []
+        error: error.message, 
+        categories: [],
       }, { status: 500 })
     }
 
-    
-    return NextResponse.json({ 
-      categories: categories || [],
-      success: true
-    })
-
+    return NextResponse.json({ categories: categories || [], success: true })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json({ 
-      error: 'Internal server error',
-      categories: []
+      error: 'Failed to fetch categories',
+      categories: [] 
     }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { name, type, icon, color } = await request.json()
+    // Validate input
+    if (!name || !type) {
+      return NextResponse.json({ error: 'Name and type are required' }, { status: 400 })
+    }
+
+    const { data: category, error } = await supabase
+      .from('categories')
+      .insert([{
+        name,
+        type: type.toUpperCase(),
+        icon: icon || 'circle',
+        color: color || '#6B7280',
+        is_system: false, // ✅ User category
+        user_id: user.id
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json({ category })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
   }
 }

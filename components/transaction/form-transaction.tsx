@@ -14,15 +14,17 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { CategoryModal } from "@/components/modal/modal-category"
 
 interface AddTransactionFormProps {
   onComplete: () => void
 }
 
-export async function FormTransaction({ onComplete }: AddTransactionFormProps) {
+export function FormTransaction({ onComplete }: AddTransactionFormProps) {
   const [date, setDate] = useState<Date>(new Date())
-  const [transactionType, setTransactionType] = useState("expense")
-  const [categories, setCategories] = useState([])
+  const [transactionType, setTransactionType] = useState<string>("")
+  const [categories, setCategories] = useState<any[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -32,15 +34,22 @@ export async function FormTransaction({ onComplete }: AddTransactionFormProps) {
 
         console.log('API Response:', data) // Debug
 
-        setCategories(data.categories || []) // ✅ Ambil property 'categories'
+        setCategories(data.categories || [])
       } catch (error) {
         console.error('Error fetching categories:', error)
         setCategories([])
       }
     }
 
+
     fetchCategories()
   }, [])
+
+
+  const handleTransactionTypeChange = (newType: string) => {
+    setTransactionType(newType)
+    setSelectedCategory("") // ✅ Reset selected category
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,7 +64,7 @@ export async function FormTransaction({ onComplete }: AddTransactionFormProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="transaction-type">Transaction Type</Label>
-          <RadioGroup id="transaction-type" defaultValue="expense" className="flex" onValueChange={setTransactionType}>
+          <RadioGroup id="transaction-type" defaultValue="" className="flex" onValueChange={handleTransactionTypeChange}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="expense" id="expense" />
               <Label htmlFor="expense" className="cursor-pointer">
@@ -107,14 +116,20 @@ export async function FormTransaction({ onComplete }: AddTransactionFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          <Select>
+          {/* Modal Categor */}
+          <CategoryModal />
+          <Select
+            value={selectedCategory}
+            onValueChange={setSelectedCategory}
+          >
             <SelectTrigger id="category">
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder={`Select category`} />
             </SelectTrigger>
             <SelectContent>
               {transactionType === "expense" ? (
                 <>
                   {categories
+                    .filter(cat => cat.type?.toLowerCase() === 'expense')
                     .map((category: any) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
@@ -124,17 +139,26 @@ export async function FormTransaction({ onComplete }: AddTransactionFormProps) {
                 </>
               ) : transactionType === "income" ? (
                 <>
-                  <SelectItem value="salary">Salary</SelectItem>
-                  <SelectItem value="freelance">Freelance</SelectItem>
-                  <SelectItem value="investments">Investments</SelectItem>
-                  <SelectItem value="gifts">Gifts</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  {
+                    categories
+                      .filter(cat => cat.type?.toLowerCase() === 'income')
+                      .map((category: any) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))
+                  }
                 </>
               ) : (
                 <>
-                  <SelectItem value="accounts">Between Accounts</SelectItem>
-                  <SelectItem value="savings">To Savings</SelectItem>
-                  <SelectItem value="investment">To Investment</SelectItem>
+                  {categories
+                    .filter(cat => cat.type?.toLowerCase() === 'transfer')
+                    .map((category: any) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  }
                 </>
               )}
             </SelectContent>
@@ -164,6 +188,7 @@ export async function FormTransaction({ onComplete }: AddTransactionFormProps) {
         </div>
 
         {transactionType === "transfer" && (
+
           <div className="space-y-2">
             <Label htmlFor="to-account">To Account</Label>
             <Select>
