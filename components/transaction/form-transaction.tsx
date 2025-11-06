@@ -22,7 +22,7 @@ interface AddTransactionFormProps {
 
 export function FormTransaction({ onComplete }: AddTransactionFormProps) {
   const [date, setDate] = useState<Date>(new Date())
-  const [transactionType, setTransactionType] = useState<string>("")
+  const [transactionType, setTransactionType] = useState<string>("expense")
   const [categories, setCategories] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>("")
 
@@ -64,9 +64,9 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="transaction-type">Transaction Type</Label>
-          <RadioGroup id="transaction-type" defaultValue="" className="flex" onValueChange={handleTransactionTypeChange}>
+          <RadioGroup id="transaction-type" defaultValue="expense" className="flex" onValueChange={handleTransactionTypeChange}>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="expense" id="expense" />
+              <RadioGroupItem value="expense" id="expense" className="cursor-pointer" />
               <Label htmlFor="expense" className="cursor-pointer">
                 Expense
               </Label>

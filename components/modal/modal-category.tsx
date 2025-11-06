@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
@@ -169,7 +169,7 @@ export function CategoryModal() {
                                     <h4 className="font-medium mb-3">{type} Categories ({typeCategories.length})</h4>
                                     <div className="grid gap-2">
                                         {typeCategories.map(category => (
-                                            <div key={category.id} className="flex items-center justify-between p-2 border rounded hover:bg-gray-50">
+                                            <div key={category.id} className="flex items-center justify-between p-2 border rounded hover:bg-pink-950">
                                                 <div className="flex items-center space-x-3">
                                                     <div
                                                         className="w-4 h-4 rounded"
@@ -180,6 +180,7 @@ export function CategoryModal() {
                                                         <Badge variant="secondary" className="text-xs">
                                                             System
                                                         </Badge>
+                                                        
                                                     )}
                                                 </div>
                                                 {!category.is_system && (

@@ -102,6 +102,7 @@ export const HeroHeader = () => {
                                         <Button
                                             onClick={handleSignOut}
                                             variant="outline"
+                                            className="cursor-pointer"
                                             size="sm">
                                             <span>Sign Out</span>
                                         </Button>

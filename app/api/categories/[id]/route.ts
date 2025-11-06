@@ -17,7 +17,7 @@ export async function DELETE(
 
     // ✅ Check if category is system category
     const { data: category } = await supabase
-      .from('transaction_categories')
+      .from('categories')
       .select('is_system, user_id')
       .eq('id', categoryId)
       .single()
@@ -38,7 +38,7 @@ export async function DELETE(
     const { data: transactions } = await supabase
       .from('transactions')
       .select('id')
-      .eq('category_id', categoryId)
+      .eq('categoryid', categoryId)
       .limit(1)
 
     if (transactions && transactions.length > 0) {
@@ -49,7 +49,7 @@ export async function DELETE(
 
     // ✅ Delete the category
     const { error } = await supabase
-      .from('transaction_categories')
+      .from('categories')
       .delete()
       .eq('id', categoryId)
       .eq('user_id', user.id) // Double check ownership

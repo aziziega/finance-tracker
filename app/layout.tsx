@@ -1,12 +1,16 @@
-"use client";
-
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { HeroHeader } from "@/components/header";
-import React, { use } from "react";
+import React from "react";
 import { AuthProvider } from "@/components/context/AuthProvider";
 import { Toaster } from "sonner"; // 
+import type { Metadata } from 'next'
 
+
+export const metadata: Metadata = {
+  title: 'Finance Tracker',
+  description: 'Personal Finance Management System',
+}
 
 export default function RootLayout({
   children,

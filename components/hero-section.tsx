@@ -73,6 +73,7 @@ export default function HeroSection() {
                                 className="hidden size-full dark:block"
                                 width="3276"
                                 height="4095"
+                                loading="eager"
                             />
                         </AnimatedGroup>
 
