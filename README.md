@@ -109,66 +109,112 @@ finance-tracker/
 
 ## 🗄️ Database Schema
 
-### **Core Tables**
+Bagian ini diperbarui agar persis mengikuti ERD pada gambar: kolom menggunakan camelCase, id bertipe text, serta enum: AccountType, TransactionType, BudgetPeriod, LoanType.
 
-#### **Users & Authentication**
+### Enumerations (contoh)
 ```sql
--- Handled by Supabase Auth
--- Extended with profiles table for additional user data
-CREATE TABLE profiles (
-  id UUID REFERENCES auth.users PRIMARY KEY,
-  full_name TEXT,
-  avatar_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Sesuaikan nilai enum sesuai kebutuhan Anda
+CREATE TYPE "AccountType"    AS ENUM ('cash','bank','credit','investment','loan','other');
+CREATE TYPE "TransactionType" AS ENUM ('income','expense','transfer');
+CREATE TYPE "BudgetPeriod"    AS ENUM ('weekly','monthly','yearly');
+CREATE TYPE "LoanType"        AS ENUM ('personal','mortgage','auto','student','credit','other');
 ```
 
-#### **Transaction Categories**
-```sql
-CREATE TABLE transaction_categories (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  type TEXT CHECK (type IN ('income', 'expense', 'transfer')),
-  icon TEXT,
-  color TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+### Tables
 
-#### **Accounts**
+#### accounts
 ```sql
 CREATE TABLE accounts (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users NOT NULL,
-  name TEXT NOT NULL,
-  type TEXT CHECK (type IN ('checking', 'savings', 'credit', 'cash', 'investment')),
-  balance DECIMAL(12,2) DEFAULT 0.00,
-  institution TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  "id"         TEXT PRIMARY KEY,
+  "name"       TEXT NOT NULL,
+  "type"       "AccountType" NOT NULL,
+  "balance"    NUMERIC NOT NULL DEFAULT 0,
+  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-#### **Transactions**
+#### categories
+```sql
+CREATE TABLE categories (
+  "id"         TEXT PRIMARY KEY,
+  "name"       TEXT NOT NULL,
+  "type"       "TransactionType" NOT NULL,
+  "color"      TEXT,
+  "icon"       TEXT,
+  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "is_system"  BOOLEAN NOT NULL DEFAULT false,
+  "user_id"    UUID REFERENCES auth.users(id) ON DELETE CASCADE
+);
+```
+
+#### transactions
 ```sql
 CREATE TABLE transactions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users NOT NULL,
-  account_id UUID REFERENCES accounts NOT NULL,
-  category_id UUID REFERENCES transaction_categories,
-  type TEXT CHECK (type IN ('income', 'expense', 'transfer')),
-  amount DECIMAL(12,2) NOT NULL,
-  description TEXT,
-  transaction_date DATE NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  "id"         TEXT PRIMARY KEY,
+  "amount"     NUMERIC NOT NULL,
+  "type"       "TransactionType" NOT NULL,
+  "categoryId" TEXT REFERENCES categories(id) ON DELETE SET NULL,
+  "description" TEXT,
+  "date"       TIMESTAMPTZ NOT NULL,
+  "accountId"  TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-### **Security**
-- **Row Level Security (RLS)** enabled on all tables
-- Users can only access their own data
-- Categories are publicly readable
-- Secure authentication with Supabase Auth
+#### budgets
+```sql
+CREATE TABLE budgets (
+  "id"         TEXT PRIMARY KEY,
+  "categoryId" TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  "amount"     NUMERIC NOT NULL,
+  "period"     "BudgetPeriod" NOT NULL,
+  "startDate"  TIMESTAMPTZ NOT NULL,
+  "endDate"    TIMESTAMPTZ NOT NULL,
+  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
 
+#### loans
+```sql
+CREATE TABLE loans (
+  "id"               TEXT PRIMARY KEY,
+  "name"             TEXT NOT NULL,
+  "originalAmount"   NUMERIC NOT NULL,
+  "currentBalance"   NUMERIC NOT NULL,
+  "interestRate"     NUMERIC NOT NULL,
+  "monthlyPayment"   NUMERIC NOT NULL,
+  "nextPaymentDate"  TIMESTAMPTZ,
+  "loanType"         "LoanType" NOT NULL,
+  "createdAt"        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+#### financial_goals
+```sql
+CREATE TABLE financial_goals (
+  "id"             TEXT PRIMARY KEY,
+  "name"           TEXT NOT NULL,
+  "targetAmount"   NUMERIC NOT NULL,
+  "currentAmount"  NUMERIC NOT NULL DEFAULT 0,
+  "targetDate"     TIMESTAMPTZ,
+  "category"       TEXT,
+  "description"    TEXT,
+  "createdAt"      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### Relationships (ringkas)
+- transactions.accountId → accounts.id
+- transactions.categoryId → categories.id
+- budgets.categoryId → categories.id
+- categories.user_id → auth.users.id
+
+Catatan: jika Anda ingin semua data dibatasi per pengguna, tambahkan kolom "user_id" ke tabel terkait (mis. accounts, transactions, budgets, loans, financial_goals) dan aktifkan RLS.
 ## 🔧 Installation & Setup
 
 ### **Prerequisites**

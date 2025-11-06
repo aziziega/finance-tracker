@@ -12,11 +12,12 @@ import { AnimatedGroup } from '@/components/ui/animated-group';
 
 export default function SignUp() {
 
-    const handleSignup = async (e: any) => {
+    const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         // Handle login logic here
         e.preventDefault();
-        const email: string = e.target[0]?.value;
-        const password: string = e.target[1]?.value;
+        const fd = new FormData(e.currentTarget);
+        const email = String(fd.get('email') ?? '');
+        const password = String(fd.get('password') ?? '');
 
         if (!email || !password) {
             toast.error('Please enter email and password');
@@ -31,6 +32,7 @@ export default function SignUp() {
         if (data) {
             // toast.success('Signup successful! Please check your email to verify your account.');
             toast.success('Signup successful! Please Login to continue.');
+            
         }
 
         if (error) {
@@ -43,7 +45,7 @@ export default function SignUp() {
         <AnimatedGroup>
             <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
                 <form
-                    action=""
+                    method="POST"
                     onSubmit={handleSignup}
                     className="bg-muted m-auto h-fit w-full max-w-sm overflow-hidden rounded-[calc(var(--radius)+.125rem)] border shadow-md shadow-zinc-950/5 dark:[--color-muted:var(--color-zinc-900)]">
                     <div className="bg-card -m-px rounded-[calc(var(--radius)+.125rem)] border p-8 pb-6">
@@ -92,7 +94,7 @@ export default function SignUp() {
                                 <Label
                                     htmlFor="email"
                                     className="block text-sm">
-                                    Username
+                                    Email address
                                 </Label>
                                 <Input
                                     type="email"

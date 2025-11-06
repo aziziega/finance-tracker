@@ -15,12 +15,14 @@ export default function LoginPage() {
 
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const handleSignin = async (e: any) => {
+    const handleSignin = async (e: React.FormEvent<HTMLFormElement>) => {
+
         // Handle login logic here
         e.preventDefault();
         setIsLoading(true);
-        const email: string = e.target[0]?.value;
-        const password: string = e.target[1]?.value;
+        const fd = new FormData(e.currentTarget);
+        const email = String(fd.get('email') ?? '');
+        const password = String(fd.get('password') ?? '');
 
         if (!email || !password) {
             toast.error('Please enter email and password');
@@ -77,7 +79,7 @@ export default function LoginPage() {
                                 <Label
                                     htmlFor="email"
                                     className="block text-sm">
-                                    Username
+                                    Email address
                                 </Label>
                                 <Input
                                     type="email"

@@ -1,5 +1,5 @@
 "use client";
-import React, { use, useState } from "react";
+import React, { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,7 +19,7 @@ export default function DashboardPreview() {
     const [showTransaction, setShowTransaction] = useState(false)
     return (
         <div className="flex min-h-screen w-full flex-col ">
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 sm:gap-6 md:p-8 sm:p-6 p-4 mt-20">
+            <main className="flex flex-1 flex-col gap-4 md:gap-8 sm:gap-6 md:p-8 sm:p-6 p-4 mt-20">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold tracking-tight">Finance Dashboard</h1>
                     <Button className="cursor-pointer" onClick={() => setShowTransaction(!showTransaction)}>

@@ -38,7 +38,7 @@ export async function DELETE(
     const { data: transactions } = await supabase
       .from('transactions')
       .select('id')
-      .eq('categoryid', categoryId)
+      .eq('categoryId', categoryId)
       .limit(1)
 
     if (transactions && transactions.length > 0) {
