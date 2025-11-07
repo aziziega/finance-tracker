@@ -5,47 +5,60 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react'
 
 import client from '@/api/client';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 
 
 export default function SignUp() {
+    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         // Handle login logic here
         e.preventDefault();
+        setIsLoading(true);
         const fd = new FormData(e.currentTarget);
         const email = String(fd.get('email') ?? '');
         const password = String(fd.get('password') ?? '');
 
         if (!email || !password) {
             toast.error('Please enter email and password');
+            setIsLoading(false);
             return;
         }
+        try {
+            const { data, error } = await client.auth.signUp({
+                email,
+                password,
+            });
+            if (error) {
+                toast.error('unable to signup Please Try Again ' + error.message);
+            }
 
-        const { data, error } = await client.auth.signUp({
-            email,
-            password,
-        });
-
-        if (data) {
-            // toast.success('Signup successful! Please check your email to verify your account.');
-            toast.success('Signup successful! Please Login to continue.');
-            
-        }
-
-        if (error) {
-            toast.error('unable to signup Please Try Again ' + error.message);
+            // Prevent auto-redirect to /dashboard from (auth)/layout by ensuring no active session
+            if (data) {
+                // In some Supabase configs, signUp creates a session (auto sign-in).
+                // Sign out to force manual login and avoid being treated as authenticated.
+                try { await client.auth.signOut(); } catch { }
+                toast.success('Signup successful! Please login to continue.');
+                router.push('/signup');
+            }
+        } catch (err) {
+            toast.error('Something went wrong during signup');
+        } finally {
+            setIsLoading(false);
         }
     }
+
 
 
     return (
         <AnimatedGroup>
             <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
                 <form
-                    method="POST"
                     onSubmit={handleSignup}
                     className="bg-muted m-auto h-fit w-full max-w-sm overflow-hidden rounded-[calc(var(--radius)+.125rem)] border shadow-md shadow-zinc-950/5 dark:[--color-muted:var(--color-zinc-900)]">
                     <div className="bg-card -m-px rounded-[calc(var(--radius)+.125rem)] border p-8 pb-6">
@@ -131,7 +144,7 @@ export default function SignUp() {
                                 />
                             </div>
 
-                            <Button className="w-full cursor-pointer" type="submit">Sign up</Button>
+                            <Button className="w-full cursor-pointer" type="submit" disabled={isLoading}>{isLoading ? 'Signing up...' : 'Sign up'}</Button>
                         </div>
 
                         <div className="my-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
