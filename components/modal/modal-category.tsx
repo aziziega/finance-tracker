@@ -36,8 +36,13 @@ export function CategoryModal() {
         try {
             const response = await fetch('/api/categories')
             const data = await response.json()
-            setCategories(data.categories || [])
-        } catch (error) {
+            const normalized = (data.categories || []).map((c: any) => ({
+                ...c,
+                type: String(c.type || '').toUpperCase(),
+                is_system: c.is_system === true || c.is_system === 'true' || c.is_system === 1,
+            }))
+            setCategories(normalized)
+        } catch {
             toast.error('Failed to fetch categories')
         }
     }
@@ -180,7 +185,7 @@ export function CategoryModal() {
                                                         <Badge variant="secondary" className="text-xs">
                                                             System
                                                         </Badge>
-                                                        
+
                                                     )}
                                                 </div>
                                                 {!category.is_system && (
@@ -188,7 +193,9 @@ export function CategoryModal() {
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleDeleteCategory(category.id)}
-                                                        className="text-red-500 hover:text-red-700"
+                                                        className="text-red-600 hover:text-red-700"
+                                                        aria-label="Delete category"
+                                                        title="Delete category"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>

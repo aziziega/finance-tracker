@@ -21,7 +21,6 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const { data: listener } = client.auth.onAuthStateChange((e, session) => {
             setUser(session?.user || null);
-            setLoading(false);
         });
 
         return () => {

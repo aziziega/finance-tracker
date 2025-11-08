@@ -9,7 +9,6 @@ const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
 
     useEffect(() => {
-
         if (!loading && !user) {
             router.push('/'); // Redirect to home page if not authenticated
         }
@@ -25,9 +24,8 @@ const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
     }
 
     // Not authenticated
-    if (!user) {
-        return null;
-    }
+    if (loading || !user) return null;
+
 
     return (
         <div>

@@ -1,65 +1,53 @@
 "use client";
+
 import { LogoIcon } from '@/components/logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react'
-
 import client from '@/api/client';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 
+export default function LoginPage() {
 
-export default function SignUp() {
-    const router = useRouter();
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+    const router = useRouter()
+    const handleSignin = async (e: any) => {
         // Handle login logic here
         e.preventDefault();
-        setIsLoading(true);
-        const fd = new FormData(e.currentTarget);
-        const email = String(fd.get('email') ?? '');
-        const password = String(fd.get('password') ?? '');
+        const email: string = e.target[0]?.value;
+        const password: string = e.target[1]?.value;
 
         if (!email || !password) {
             toast.error('Please enter email and password');
-            setIsLoading(false);
             return;
         }
-        try {
-            const { data, error } = await client.auth.signUp({
-                email,
-                password,
-            });
-            if (error) {
-                toast.error('unable to signup Please Try Again ' + error.message);
-            }
 
-            // Prevent auto-redirect to /dashboard from (auth)/layout by ensuring no active session
-            if (data) {
-                // In some Supabase configs, signUp creates a session (auto sign-in).
-                // Sign out to force manual login and avoid being treated as authenticated.
-                try { await client.auth.signOut(); } catch { }
-                toast.success('Signup successful! Please login to continue.');
-                router.push('/signup');
-            }
-        } catch (err) {
-            toast.error('Something went wrong during signup');
-        } finally {
-            setIsLoading(false);
+        const { data, error } = await client.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (data) {
+            console.log('Login successful:', data);
+            toast.success('Successfully signed in!');
+            router.push('/dashboard');
+        }
+
+
+        if (error) {
+            toast.error('unable to signup Please Try Again ' + error.message);
         }
     }
-
-
 
     return (
         <AnimatedGroup>
             <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
                 <form
-                    onSubmit={handleSignup}
+                    action=""
+                    onSubmit={handleSignin}
                     className="bg-muted m-auto h-fit w-full max-w-sm overflow-hidden rounded-[calc(var(--radius)+.125rem)] border shadow-md shadow-zinc-950/5 dark:[--color-muted:var(--color-zinc-900)]">
                     <div className="bg-card -m-px rounded-[calc(var(--radius)+.125rem)] border p-8 pb-6">
                         <div className="text-center">
@@ -69,40 +57,11 @@ export default function SignUp() {
                                 className="mx-auto block w-fit">
                                 <LogoIcon />
                             </Link>
-                            <h1 className="mb-1 mt-4 text-xl font-semibold">Create a Tailark Account</h1>
-                            <p className="text-sm">Welcome! Create an account to get started</p>
+                            <h1 className="mb-1 mt-4 text-xl font-semibold">Sign In to Tailark</h1>
+                            <p className="text-sm">Welcome back! Sign in to continue</p>
                         </div>
 
                         <div className="mt-6 space-y-6">
-                            {/* <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                                <Label
-                                    htmlFor="firstname"
-                                    className="block text-sm">
-                                    Firstname
-                                </Label>
-                                <Input
-                                    type="text"
-                                    required
-                                    name="firstname"
-                                    id="firstname"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label
-                                    htmlFor="lastname"
-                                    className="block text-sm">
-                                    Lastname
-                                </Label>
-                                <Input
-                                    type="text"
-                                    required
-                                    name="lastname"
-                                    id="lastname"
-                                />
-                            </div>
-                        </div> */}
-
                             <div className="space-y-2">
                                 <Label
                                     htmlFor="email"
@@ -114,13 +73,14 @@ export default function SignUp() {
                                     required
                                     name="email"
                                     id="email"
+                                    placeholder='example@gmail.com'
                                 />
                             </div>
 
                             <div className="space-y-0.5">
                                 <div className="flex items-center justify-between">
                                     <Label
-                                        htmlFor="password"
+                                        htmlFor="pwd"
                                         className="text-sm">
                                         Password
                                     </Label>
@@ -144,7 +104,7 @@ export default function SignUp() {
                                 />
                             </div>
 
-                            <Button className="w-full cursor-pointer" type="submit" disabled={isLoading}>{isLoading ? 'Signing up...' : 'Sign up'}</Button>
+                            <Button className="w-full" type="submit" >Login</Button>
                         </div>
 
                         <div className="my-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -205,17 +165,18 @@ export default function SignUp() {
 
                     <div className="p-3">
                         <p className="text-accent-foreground text-center text-sm">
-                            Have an account ?
+                            Don't have an account ?
                             <Button
                                 asChild
                                 variant="link"
                                 className="px-2">
-                                <Link href="/login">Sign In</Link>
+                                <Link href="/signup">Create account</Link>
                             </Button>
                         </p>
                     </div>
                 </form>
-            </section>
+
+            </section >
         </AnimatedGroup>
     )
 }

@@ -3,7 +3,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { HeroHeader } from "@/components/header";
 import React from "react";
 import { AuthProvider } from "@/components/context/AuthProvider";
-import { Toaster } from "sonner"; // 
+import { Toaster } from "sonner";
 import type { Metadata } from 'next'
 
 
