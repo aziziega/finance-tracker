@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useAuth from '@/hooks/useAuth';
-import client from '@/api/client'
+import { createClient } from '@/utils/supabase/client';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 
 export default function SignUp() {
@@ -40,7 +40,8 @@ export default function SignUp() {
         setIsSubmitting(true);
 
         try {
-            const { data, error } = await client.auth.signUp({
+            const supabase = createClient();
+            const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
             });
@@ -54,7 +55,7 @@ export default function SignUp() {
             // Enforce explicit login after signup: sign out in case a session was created and redirect to login
             toast.success('Signup successful! Please login to continue.');
             try {
-                await client.auth.signOut();
+                await supabase.auth.signOut();
             } catch {
                 // Ignore sign out errors
             }

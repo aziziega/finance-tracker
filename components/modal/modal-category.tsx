@@ -74,10 +74,18 @@ export function CategoryModal() {
                 fetchCategories()
             } else {
                 const error = await response.json()
-                toast.error(error.error || 'Failed to create category')
+                const errorMessage = error.error || 'Failed to create category'
+                console.error('Error creating category:', { status: response.status, error })
+                
+                if (response.status === 401) {
+                    toast.error('Please login to create categories')
+                } else {
+                    toast.error(errorMessage)
+                }
             }
         } catch (error) {
-            toast.error('Failed to create category')
+            console.error('Failed to create category:', error)
+            toast.error('Failed to create category. Please check console for details.')
         } finally {
             setLoading(false)
         }

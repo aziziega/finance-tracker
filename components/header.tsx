@@ -7,7 +7,7 @@ import React from 'react'
 import { cn } from '@/lib/utils'
 import { ModeToggle } from './theme-toggle'
 import useAuth from '@/hooks/useAuth'
-import client from '@/api/client'
+import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
 
@@ -25,7 +25,8 @@ export const HeroHeader = () => {
     const { user, loading } = useAuth() || {};
     const router = useRouter();
     const handleSignOut = async () => {
-        await client.auth.signOut();
+        const supabase = createClient();
+        await supabase.auth.signOut();
         router.push('/');
     }
 

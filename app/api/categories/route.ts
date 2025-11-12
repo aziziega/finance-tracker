@@ -69,10 +69,18 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Database error creating category:', error)
+      return NextResponse.json({ 
+        error: error.message || 'Database error' 
+      }, { status: 500 })
+    }
 
     return NextResponse.json({ category })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Failed to create category:', error)
+    return NextResponse.json({ 
+      error: error.message || 'Failed to create category' 
+    }, { status: 500 })
   }
 }

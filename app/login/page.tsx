@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { toast } from 'sonner';
-import client from '@/api/client';
+import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AnimatedGroup } from '@/components/ui/animated-group';
@@ -27,8 +27,8 @@ export default function LoginPage() {
         setIsSubmitting(true);
 
         try {
-
-            const { data, error } = await client.auth.signInWithPassword({
+            const supabase = createClient();
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
