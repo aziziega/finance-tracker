@@ -6,17 +6,29 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react'
-
-import client from '@/api/client';
+import { useEffect, useState } from 'react';
+import useAuth from '@/hooks/useAuth';
+import client from '@/api/client'
 import { AnimatedGroup } from '@/components/ui/animated-group';
 
-
 export default function SignUp() {
-    const router = useRouter()
+    const router = useRouter();
+    const { user, loading } = useAuth() || {};
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (!loading && user) {
+            router.replace('/dashboard');
+        }
+    }, [user, loading, router]);
+
     const handleSignup = async (e: any) => {
-        // Handle login logic here
         e.preventDefault();
+
+        // Prevent multiple submissions
+        if (isSubmitting) return;
+
         const email: string = e.target[0]?.value;
         const password: string = e.target[1]?.value;
 
@@ -25,27 +37,33 @@ export default function SignUp() {
             return;
         }
 
-        const { data, error } = await client.auth.signUp({
-            email,
-            password,
-        });
+        setIsSubmitting(true);
 
-        // if (data) {
-        //     // toast.success('Signup successful! Please check your email to verify your account.');
-        //     toast.success('Signup successful! Please Login to continue.');
-        // }
+        try {
+            const { data, error } = await client.auth.signUp({
+                email,
+                password,
+            });
 
-        if (error) {
-            toast.error('unable to signup Please Try Again ' + error.message);
+            if (error) {
+                toast.error('Signup failed: ' + error.message);
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Enforce explicit login after signup: sign out in case a session was created and redirect to login
+            toast.success('Signup successful! Please login to continue.');
+            try {
+                await client.auth.signOut();
+            } catch {
+                // Ignore sign out errors
+            }
+            router.replace('/signup');
+        } catch (err) {
+            toast.error('An unexpected error occurred');
+            setIsSubmitting(false);
         }
-
-
-        toast.success('Signup successful! Please Login to continue.');
-        try { await client.auth.signOut(); } catch { /* ignore */ }
-        router.replace('/signup');
     }
-
-
 
     return (
         <AnimatedGroup>

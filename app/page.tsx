@@ -10,10 +10,10 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     }
-  }, [loading, user]);
-
+  }, [loading, user, router]);
+  
   return (
     <>
       <HeroSection />

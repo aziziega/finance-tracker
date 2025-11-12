@@ -8,39 +8,53 @@ import Link from 'next/link'
 import { toast } from 'sonner';
 import client from '@/api/client';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatedGroup } from '@/components/ui/animated-group';
+import useAuth from '@/hooks/useAuth';
 
 export default function LoginPage() {
 
-    const router = useRouter()
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { user, loading } = useAuth() || {};
+    const router = useRouter();
+
     const handleSignin = async (e: any) => {
-        // Handle login logic here
         e.preventDefault();
         const email: string = e.target[0]?.value;
         const password: string = e.target[1]?.value;
+        if (isSubmitting) return;  // ✅ Prevent multiple submit
 
-        if (!email || !password) {
-            toast.error('Please enter email and password');
-            return;
-        }
+        setIsSubmitting(true);
 
-        const { data, error } = await client.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
 
-        if (data) {
-            console.log('Login successful:', data);
-            toast.success('Successfully signed in!');
-            router.push('/dashboard');
-        }
+            const { data, error } = await client.auth.signInWithPassword({
+                email,
+                password,
+            });
 
+            if (error) {
+                toast.error('Login failed: ' + error.message);
+                setIsSubmitting(false);  // ✅ Reset state on error
+                return;  // ✅ Early return, stay on page
+            }
 
-        if (error) {
-            toast.error('unable to signup Please Try Again ' + error.message);
+            if (data?.session) {
+                toast.success('Successfully signed in!');
+                // ✅ Let useEffect + AuthProvider handle redirect
+            }
+        } catch (err) {
+            toast.error('An unexpected error occurred');
+            setIsSubmitting(false);
         }
     }
+
+    // ✅ Guard untuk user yang sudah login
+    useEffect(() => {
+        if (!loading && user) {
+            router.replace('/dashboard');
+        }
+    }, [user, loading, router]);
 
     return (
         <AnimatedGroup>
@@ -70,7 +84,7 @@ export default function LoginPage() {
                                 </Label>
                                 <Input
                                     type="email"
-                                    required
+
                                     name="email"
                                     id="email"
                                     placeholder='example@gmail.com'
@@ -97,14 +111,16 @@ export default function LoginPage() {
                                 </div>
                                 <Input
                                     type="password"
-                                    required
+
                                     name="password"
                                     id="password"
                                     className="input sz-md variant-mixed"
                                 />
                             </div>
 
-                            <Button className="w-full" type="submit" >Login</Button>
+                            <Button className="w-full" disabled={isSubmitting}>
+                                {isSubmitting ? 'Logging in...' : 'Login'}
+                            </Button>
                         </div>
 
                         <div className="my-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">

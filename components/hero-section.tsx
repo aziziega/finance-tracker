@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { TextEffect } from '@/components/ui/text-effect'
 import { AnimatedGroup } from '@/components/ui/animated-group'
-import { HeroHeader } from './header'
-
 const transitionVariants = {
     item: {
         hidden: {
@@ -141,7 +139,7 @@ export default function HeroSection() {
                                             asChild
                                             size="lg"
                                             className="rounded-xl px-5 text-base">
-                                            <Link href="#link">
+                                            <Link href="/login">
                                                 <span className="text-nowrap">Start Building</span>
                                             </Link>
                                         </Button>
