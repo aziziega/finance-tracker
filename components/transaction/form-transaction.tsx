@@ -122,7 +122,7 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
             value={selectedCategory}
             onValueChange={setSelectedCategory}
           >
-            <SelectTrigger id="category">
+            <SelectTrigger className="w-full" id="category">
               <SelectValue placeholder={`Select category`} />
             </SelectTrigger>
             <SelectContent>
@@ -175,7 +175,7 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
         <div className="space-y-2">
           <Label htmlFor="account">Account</Label>
           <Select>
-            <SelectTrigger id="account">
+            <SelectTrigger className="w-full" id="account">
               <SelectValue placeholder="Select account" />
             </SelectTrigger>
             <SelectContent>

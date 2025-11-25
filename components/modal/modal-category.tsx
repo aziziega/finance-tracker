@@ -21,6 +21,15 @@ interface Category {
 }
 
 export function CategoryModal() {
+    const colorGenerate = (): string => {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+
     const [categories, setCategories] = useState<Category[]>([])
     const [isOpen, setIsOpen] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
@@ -29,8 +38,9 @@ export function CategoryModal() {
         name: '',
         type: 'EXPENSE',
         icon: 'circle',
-        color: '#6B7280'
+        color: colorGenerate(),
     })
+
 
     const fetchCategories = async () => {
         try {
@@ -58,6 +68,10 @@ export function CategoryModal() {
             toast.error('Category name is required')
             return
         }
+        if (categories.find(c => c.name.toLowerCase() === newCategory.name.trim().toLowerCase() && c.type === newCategory.type)) {
+            toast.error('Category with this name and type already exists')
+            return
+        }
 
         setLoading(true)
         try {
@@ -76,7 +90,7 @@ export function CategoryModal() {
                 const error = await response.json()
                 const errorMessage = error.error || 'Failed to create category'
                 console.error('Error creating category:', { status: response.status, error })
-                
+
                 if (response.status === 401) {
                     toast.error('Please login to create categories')
                 } else {
