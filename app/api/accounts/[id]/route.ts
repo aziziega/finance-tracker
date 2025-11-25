@@ -13,28 +13,28 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: categoryId } = await params
+    const { id: accountId } = await params
 
-    // ✅ Cek apakah category adalah system category
-    const { data: category } = await supabase
-      .from('categories')
+    // ✅ Cek apakah account adalah system account
+    const { data: account } = await supabase
+      .from('accounts')
       .select('is_system, user_id')
-      .eq('id', categoryId)
+      .eq('id', accountId)
       .single()
 
-    if (!category) {
+    if (!account) {
       return NextResponse.json({ 
-        error: 'Category not found' 
+        error: 'Account not found' 
       }, { status: 404 })
     }
 
-    // ✅ Jika SYSTEM CATEGORY: hide saja (tidak delete dari DB)
-    if (category.is_system) {
+    // ✅ Jika SYSTEM ACCOUNT: hide saja (tidak delete dari DB)
+    if (account.is_system) {
       const { error } = await supabase
-        .from('hidden_categories')
+        .from('hidden_accounts')
         .insert({ 
           user_id: user.id, 
-          category_id: categoryId 
+          account_id: accountId 
         })
 
       if (error) {
@@ -48,14 +48,14 @@ export async function DELETE(
       return NextResponse.json({ 
         success: true, 
         hidden: true,
-        message: 'System category hidden successfully'
+        message: 'System account hidden successfully'
       })
     }
 
-    // ✅ Jika CUSTOM CATEGORY: cek ownership & transactions
-    if (category.user_id !== user.id) {
+    // ✅ Jika CUSTOM ACCOUNT: cek ownership & transactions
+    if (account.user_id !== user.id) {
       return NextResponse.json({ 
-        error: 'Cannot delete category from other user' 
+        error: 'Cannot delete account from other user' 
       }, { status: 403 })
     }
 
@@ -63,20 +63,20 @@ export async function DELETE(
     const { data: transactions } = await supabase
       .from('transactions')
       .select('id')
-      .eq('categoryId', categoryId)
+      .eq('accountId', accountId)
       .limit(1)
 
     if (transactions && transactions.length > 0) {
       return NextResponse.json({ 
-        error: 'Cannot delete category that is being used in transactions' 
+        error: 'Cannot delete account that is being used in transactions' 
       }, { status: 400 })
     }
 
-    // ✅ Delete custom category dari DB
+    // ✅ Delete custom account dari DB
     const { error } = await supabase
-      .from('categories')
+      .from('accounts')
       .delete()
-      .eq('id', categoryId)
+      .eq('id', accountId)
       .eq('user_id', user.id)
 
     if (error) throw error
@@ -84,12 +84,12 @@ export async function DELETE(
     return NextResponse.json({ 
       success: true, 
       deleted: true,
-      message: 'Custom category deleted successfully'
+      message: 'Custom account deleted successfully'
     })
   } catch (error) {
-    console.error('Delete category error:', error)
+    console.error('Delete account error:', error)
     return NextResponse.json({ 
-      error: 'Failed to delete category' 
+      error: 'Failed to delete account' 
     }, { status: 500 })
   }
 }

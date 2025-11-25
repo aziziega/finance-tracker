@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { CategoryModal } from "@/components/modal/modal-category"
+import { CategoryAccount } from "@/components/modal/modal-account"
 
 interface AddTransactionFormProps {
   onComplete: () => void
@@ -72,13 +73,13 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
               </Label>
             </div>
             <div className="flex items-center space-x-2 ml-4">
-              <RadioGroupItem value="income" id="income" />
+              <RadioGroupItem value="income" id="income" className="cursor-pointer" />
               <Label htmlFor="income" className="cursor-pointer">
                 Income
               </Label>
             </div>
             <div className="flex items-center space-x-2 ml-4">
-              <RadioGroupItem value="transfer" id="transfer" />
+              <RadioGroupItem value="transfer" id="transfer" className="cursor-pointer" />
               <Label htmlFor="transfer" className="cursor-pointer">
                 Transfer
               </Label>
@@ -174,6 +175,7 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="account">Account</Label>
+          <CategoryAccount />
           <Select>
             <SelectTrigger className="w-full" id="account">
               <SelectValue placeholder="Select account" />

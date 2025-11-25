@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, Settings } from 'lucide-react'
+import { Trash2, Plus, Settings, EyeOff, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Category {
@@ -31,6 +31,7 @@ export function CategoryModal() {
     }
 
     const [categories, setCategories] = useState<Category[]>([])
+    const [hiddenCategories, setHiddenCategories] = useState<any[]>([])
     const [isOpen, setIsOpen] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -57,9 +58,23 @@ export function CategoryModal() {
         }
     }
 
+    const fetchHiddenCategories = async () => {
+        try {
+            const response = await fetch('/api/categories/hidden')
+            if (response.ok) {
+                const data = await response.json()
+                setHiddenCategories(data.categories || [])
+            }
+        } catch (error) {
+            // Silent fail - user might not be logged in
+            console.log('Failed to fetch hidden categories:', error)
+        }
+    }
+
     useEffect(() => {
         if (isOpen) {
             fetchCategories()
+            fetchHiddenCategories()
         }
     }, [isOpen])
 
@@ -106,7 +121,14 @@ export function CategoryModal() {
     }
 
     const handleDeleteCategory = async (categoryId: string) => {
-        if (!confirm('Are you sure you want to delete this category?')) return
+        const category = categories.find(c => c.id === categoryId)
+        const isSystem = category?.is_system
+
+        const confirmMessage = isSystem
+            ? 'Hide this system category from your view?'
+            : 'Are you sure you want to delete this category?'
+
+        if (!confirm(confirmMessage)) return
 
         try {
             const response = await fetch(`/api/categories/${categoryId}`, {
@@ -114,14 +136,39 @@ export function CategoryModal() {
             })
 
             if (response.ok) {
-                toast.success('Category deleted successfully')
+                const result = await response.json()
+                const successMessage = result.hidden
+                    ? 'Category hidden successfully'
+                    : 'Category deleted successfully'
+
+                toast.success(successMessage)
                 fetchCategories()
+                fetchHiddenCategories()
             } else {
                 const error = await response.json()
-                toast.error(error.error || 'Failed to delete category')
+                toast.error(error.error || 'Failed to process category')
             }
         } catch (error) {
-            toast.error('Failed to delete category')
+            toast.error('Failed to process category')
+        }
+    }
+
+    const handleRestoreCategory = async (categoryId: string) => {
+        try {
+            const response = await fetch(`/api/categories/${categoryId}/unhide`, {
+                method: 'POST'
+            })
+
+            if (response.ok) {
+                toast.success('Category restored successfully')
+                fetchCategories()
+                fetchHiddenCategories()
+            } else {
+                const error = await response.json()
+                toast.error(error.error || 'Failed to restore category')
+            }
+        } catch (error) {
+            toast.error('Failed to restore category')
         }
     }
 
@@ -178,7 +225,7 @@ export function CategoryModal() {
                                     </Select>
                                 </div>
                                 <div className="flex items-end">
-                                    <Button onClick={handleAddCategory} disabled={loading} className="w-full">
+                                    <Button onClick={handleAddCategory} disabled={loading} className="w-full cursor-pointer">
                                         {loading ? 'Creating...' : 'Create'}
                                     </Button>
                                 </div>
@@ -207,21 +254,22 @@ export function CategoryModal() {
                                                         <Badge variant="secondary" className="text-xs">
                                                             System
                                                         </Badge>
-
                                                     )}
                                                 </div>
-                                                {!category.is_system && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDeleteCategory(category.id)}
-                                                        className="text-red-600 hover:text-red-700"
-                                                        aria-label="Delete category"
-                                                        title="Delete category"
-                                                    >
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDeleteCategory(category.id)}
+                                                    className="text-red-600 hover:text-red-700 cursor-pointer"
+                                                    aria-label={category.is_system ? "Hide category" : "Delete category"}
+                                                    title={category.is_system ? "Hide this category" : "Delete category"}
+                                                >
+                                                    {category.is_system ? (
+                                                        <EyeOff className="h-4 w-4" />
+                                                    ) : (
                                                         <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
+                                                    )}
+                                                </Button>
                                             </div>
                                         ))}
                                     </div>
@@ -229,6 +277,49 @@ export function CategoryModal() {
                             )
                         })}
                     </div>
+
+                    {/* Hidden Categories Section */}
+                    {hiddenCategories.length > 0 && (
+                        <div className="border rounded-lg p-4 bg-muted/50">
+                            <h3 className="text-lg font-semibold mb-3">Hidden Categories ({hiddenCategories.length})</h3>
+                            <div className="grid gap-2">
+                                {hiddenCategories.map(item => {
+                                    const category = item.category
+                                    if (!category) return null
+
+                                    return (
+                                        <div key={category.id} className="flex items-center justify-between p-2 border rounded bg-background/50">
+                                            <div className="flex items-center space-x-3">
+                                                <div
+                                                    className="w-4 h-4 rounded opacity-50"
+                                                    style={{ backgroundColor: category.color }}
+                                                />
+                                                <span className="font-medium opacity-60">{category.name}</span>
+                                                <Badge variant="outline" className="text-xs">
+                                                    {category.type}
+                                                </Badge>
+                                                {category.is_system && (
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        System
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleRestoreCategory(category.id)}
+                                                className="text-green-600 hover:text-green-700 cursor-pointer"
+                                                aria-label="Restore category"
+                                                title="Restore category"
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </DialogContent>
         </Dialog>

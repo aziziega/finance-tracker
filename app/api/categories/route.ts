@@ -6,20 +6,38 @@ export async function GET() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    let query = supabase
-      .from('categories')
-      .select('*')
-      
-      // Query logic
-      if(user) {
-        // Logged in user: system categories + their custom categories
-        query = query.or(`is_system.eq.true,user_id.eq.${user.id}`)
-      } else {
-        // Not logged in: only system categories
-        query = query.eq('is_system', true)
+    if (!user) {
+      // User belum login: hanya tampilkan system categories
+      const { data: categories, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_system', true)
+        .order('name', { ascending: true })
+
+      if (error) {
+        console.log('Database error:', error)
+        return NextResponse.json({ 
+          error: error.message, 
+          categories: [],
+        }, { status: 500 })
       }
 
-      const { data: categories, error } = await query
+      return NextResponse.json({ categories: categories || [], success: true })
+    }
+
+    // ✅ User sudah login: ambil hidden categories mereka
+    const { data: hiddenCategories } = await supabase
+      .from('hidden_categories')
+      .select('category_id')
+      .eq('user_id', user.id)
+
+    const hiddenIds = (hiddenCategories || []).map(h => h.category_id)
+
+    // Query: system categories + custom user categories
+    const { data: categories, error } = await supabase
+      .from('categories')
+      .select('*')
+      .or(`is_system.eq.true,user_id.eq.${user.id}`)
       .order('is_system', { ascending: false })
       .order('name', { ascending: true })
 
@@ -31,7 +49,15 @@ export async function GET() {
       }, { status: 500 })
     }
 
-    return NextResponse.json({ categories: categories || [], success: true })
+    // ✅ Filter out hidden categories
+    const visibleCategories = (categories || []).filter(
+      cat => !hiddenIds.includes(cat.id)
+    )
+
+    return NextResponse.json({ 
+      categories: visibleCategories, 
+      success: true 
+    })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json({ 
