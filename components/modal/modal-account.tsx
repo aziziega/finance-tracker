@@ -129,7 +129,7 @@ export function CategoryAccount() {
                 const successMessage = result.hidden
                     ? 'Account hidden successfully'
                     : 'Account deleted successfully'
-                
+
                 toast.success(successMessage)
                 fetchAccounts()
                 fetchHiddenAccounts()
@@ -170,9 +170,9 @@ export function CategoryAccount() {
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Account Management</DialogTitle>
-                    </DialogHeader>
+                <DialogHeader>
+                    <DialogTitle>Account Management</DialogTitle>
+                </DialogHeader>
 
                 <div className="space-y-6">
                     {/* Add Account Form */}
@@ -192,7 +192,7 @@ export function CategoryAccount() {
                             <h4 className="font-medium">Create New Account</h4>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <Label htmlFor="account-name">Name</Label>
+                                    <Label htmlFor="account-name" className="mb-2">Name</Label>
                                     <Input
                                         id="account-name"
                                         value={newAccount.name}
@@ -201,7 +201,7 @@ export function CategoryAccount() {
                                     />
                                 </div>
                                 <div>
-                                    <Label htmlFor="account-type">Type</Label>
+                                    <Label htmlFor="account-type" className="mb-2">Type</Label>
                                     <Select value={newAccount.type} onValueChange={(value) => setNewAccount({ ...newAccount, type: value })}>
                                         <SelectTrigger>
                                             <SelectValue />
@@ -217,7 +217,7 @@ export function CategoryAccount() {
                                     </Select>
                                 </div>
                                 <div>
-                                    <Label htmlFor="account-balance">Initial Balance</Label>
+                                    <Label htmlFor="account-balance" className="mb-2">Initial Balance</Label>
                                     <Input
                                         id="account-balance"
                                         type="number"
@@ -237,7 +237,7 @@ export function CategoryAccount() {
 
                     {/* Accounts List */}
                     <div className="space-y-4">
-                        {['cash','bank','credit','investment','loan','other'].map(type => {
+                        {['cash', 'bank', 'credit', 'investment', 'loan', 'other'].map(type => {
                             const typeAccounts = accounts.filter(acc => acc.type === type)
 
                             return (

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,35 +21,40 @@ interface AddTransactionFormProps {
   onComplete: () => void
 }
 
+
 export function FormTransaction({ onComplete }: AddTransactionFormProps) {
   const [date, setDate] = useState<Date>(new Date())
   const [transactionType, setTransactionType] = useState<string>("expense")
   const [categories, setCategories] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>("")
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('/api/categories')
-        const data = await response.json()
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await fetch('/api/categories')
+      const data = await response.json()
 
-        console.log('API Response:', data) // Debug
+      console.log('API Response:', data) // Debug
 
-        setCategories(data.categories || [])
-      } catch (error) {
-        console.error('Error fetching categories:', error)
-        setCategories([])
-      }
+      setCategories(data.categories || [])
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      setCategories([])
     }
-
-
-    fetchCategories()
   }, [])
 
+  useEffect(() => {
+    fetchCategories()
+  }, [refreshKey, fetchCategories])
+
+  const handleCategoryAdded = () => {
+    // Trigger re-fetch ketika kategori baru ditambah
+    setRefreshKey(prev => prev + 1)
+  }
 
   const handleTransactionTypeChange = (newType: string) => {
     setTransactionType(newType)
-    setSelectedCategory("") // ✅ Reset selected category
+    setSelectedCategory("")
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -118,7 +123,7 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
           {/* Modal Categor */}
-          <CategoryModal />
+          <CategoryModal onCategoryAdded={handleCategoryAdded} />
           <Select
             value={selectedCategory}
             onValueChange={setSelectedCategory}

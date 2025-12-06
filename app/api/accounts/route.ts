@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       .from('accounts')
       .insert([{
         name,
-        type: type.toLowerCase(),
+        type: type.toUpperCase(), // ✅ UPPERCASE untuk enum
         balance: balance || 0,
         is_system: false, // ✅ User account
         user_id: user.id

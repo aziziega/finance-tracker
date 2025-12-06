@@ -22,8 +22,7 @@ export default function LoginPage() {
         e.preventDefault();
         const email: string = e.target[0]?.value;
         const password: string = e.target[1]?.value;
-        if (isSubmitting) return;  // ✅ Prevent multiple submit
-
+        if (isSubmitting) return; 
         setIsSubmitting(true);
 
         try {

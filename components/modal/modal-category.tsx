@@ -20,7 +20,11 @@ interface Category {
     user_id?: string
 }
 
-export function CategoryModal() {
+interface CategoryModalProps {
+    onCategoryAdded?: () => void
+}
+
+export function CategoryModal(props: CategoryModalProps) {
     const colorGenerate = (): string => {
         const letters = '0123456789ABCDEF';
         let color = '#';
@@ -101,6 +105,7 @@ export function CategoryModal() {
                 setNewCategory({ name: '', type: 'EXPENSE', icon: 'circle', color: '#6B7280' })
                 setShowAddForm(false)
                 fetchCategories()
+                props.onCategoryAdded?.()
             } else {
                 const error = await response.json()
                 const errorMessage = error.error || 'Failed to create category'
@@ -144,6 +149,7 @@ export function CategoryModal() {
                 toast.success(successMessage)
                 fetchCategories()
                 fetchHiddenCategories()
+                props.onCategoryAdded?.()
             } else {
                 const error = await response.json()
                 toast.error(error.error || 'Failed to process category')
@@ -163,6 +169,7 @@ export function CategoryModal() {
                 toast.success('Category restored successfully')
                 fetchCategories()
                 fetchHiddenCategories()
+                props.onCategoryAdded?.()
             } else {
                 const error = await response.json()
                 toast.error(error.error || 'Failed to restore category')
@@ -181,7 +188,7 @@ export function CategoryModal() {
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
+                <DialogHeader className="mb-6 pb-2">
                     <DialogTitle>Category Management</DialogTitle>
                 </DialogHeader>
 
