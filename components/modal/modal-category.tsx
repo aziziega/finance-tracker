@@ -226,11 +226,11 @@ export function CategoryModal(props: CategoryModalProps) {
                     </div>
 
                     {showAddForm && (
-                        <div className="border rounded-lg p-4 space-y-4">
+                        <div className="border rounded-lg p-4 space-y-4 bg-muted/50 ">
                             <h4 className="font-medium">Create New Category</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <Label htmlFor="category-name">Name</Label>
+                            <div className="flex gap-2 ">
+                                <div className="flex-1">
+                                    <Label htmlFor="category-name" className="mb-1">Name</Label>
                                     <Input
                                         id="category-name"
                                         value={newCategory.name}
@@ -238,7 +238,7 @@ export function CategoryModal(props: CategoryModalProps) {
                                         placeholder="Category name"
                                     />
                                 </div>
-                                <div>
+                                {/* <div>
                                     <Label htmlFor="category-type">Type</Label>
                                     <Select
                                         value={newCategory.type}
@@ -262,9 +262,9 @@ export function CategoryModal(props: CategoryModalProps) {
                                             )}
                                         </SelectContent>
                                     </Select>
-                                </div>
-                                <div className="flex items-end">
-                                    <Button onClick={handleAddCategory} disabled={loading} className="w-full cursor-pointer">
+                                </div> */}
+                                <div className="flex items-end ">
+                                    <Button onClick={handleAddCategory} disabled={loading} className="cursor-pointer">
                                         {loading ? 'Creating...' : 'Create'}
                                     </Button>
                                 </div>

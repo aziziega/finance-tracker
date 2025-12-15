@@ -31,8 +31,9 @@ export function CategoryAccount(props: CategoryAccountProps) {
     const [loading, setLoading] = useState(false)
     const [newAccount, setNewAccount] = useState({
         name: '',
-        balance: '', // String agar placeholder visible
+        balance: '', // Raw value (for API)
     })
+    const [displayBalance, setDisplayBalance] = useState('') // Formatted value (for display)
 
 
     const fetchAccounts = async () => {
@@ -73,6 +74,27 @@ export function CategoryAccount(props: CategoryAccountProps) {
         }
     }, [isOpen])
 
+    // Format balance dengan thousand separator
+    const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const input = e.target.value
+
+        // Remove semua non-digit characters
+        const rawValue = input.replace(/[^\d]/g, '')
+
+        if (rawValue === '') {
+            setNewAccount({ ...newAccount, balance: '' })
+            setDisplayBalance('')
+            return
+        }
+
+        // Simpan raw value (untuk submit ke API)
+        setNewAccount({ ...newAccount, balance: rawValue })
+
+        // Format dengan thousand separator untuk display
+        const formatted = Number(rawValue).toLocaleString('id-ID')
+        setDisplayBalance(formatted)
+    }
+
     const handleAddAccount = async () => {
         if (!newAccount.name.trim()) {
             toast.error('Account name is required')
@@ -100,6 +122,7 @@ export function CategoryAccount(props: CategoryAccountProps) {
             if (response.ok) {
                 toast.success('Wallet created successfully')
                 setNewAccount({ name: '', balance: '' })
+                setDisplayBalance('')
                 setShowAddForm(false)
                 fetchAccounts()
                 // STEP 2: Notify parent untuk refresh dropdown
@@ -178,7 +201,7 @@ export function CategoryAccount(props: CategoryAccountProps) {
             toast.error('Failed to restore account')
         }
     }
-    
+
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -223,9 +246,9 @@ export function CategoryAccount(props: CategoryAccountProps) {
                                     <Label htmlFor="wallet-balance">Initial Balance</Label>
                                     <Input
                                         id="wallet-balance"
-                                        type="number"
-                                        value={newAccount.balance}
-                                        onChange={(e) => setNewAccount({ ...newAccount, balance: e.target.value })}
+                                        type="text"
+                                        value={displayBalance}
+                                        onChange={handleBalanceChange}
                                         placeholder="0"
                                     />
                                 </div>
