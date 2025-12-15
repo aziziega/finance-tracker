@@ -34,7 +34,6 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
       const response = await fetch('/api/categories')
       const data = await response.json()
 
-      console.log('API Response:', data) // Debug
 
       setCategories(data.categories || [])
     } catch (error) {
