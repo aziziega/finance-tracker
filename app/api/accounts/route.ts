@@ -76,17 +76,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { name, type, balance } = await request.json()
+    const { name, balance } = await request.json()
     // Validate input
-    if (!name || !type) {
-      return NextResponse.json({ error: 'Name and type are required' }, { status: 400 })
+    if (!name) {
+      return NextResponse.json({ error: 'Wallet name is required' }, { status: 400 })
     }
 
     const { data: account, error } = await supabase
       .from('accounts')
       .insert([{
         name,
-        type: type.toUpperCase(), // ✅ UPPERCASE untuk enum
         balance: balance || 0,
         is_system: false, // ✅ User account
         user_id: user.id

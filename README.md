@@ -109,112 +109,144 @@ finance-tracker/
 
 ## 🗄️ Database Schema
 
-Bagian ini diperbarui agar persis mengikuti ERD pada gambar: kolom menggunakan camelCase, id bertipe text, serta enum: AccountType, TransactionType, BudgetPeriod, LoanType.
+Database menggunakan Supabase (PostgreSQL) dengan UUID untuk primary keys dan camelCase untuk column names.
 
-### Enumerations (contoh)
-```sql
--- Sesuaikan nilai enum sesuai kebutuhan Anda
-CREATE TYPE "AccountType"    AS ENUM ('cash','bank','credit','investment','loan','other');
-CREATE TYPE "TransactionType" AS ENUM ('income','expense','transfer');
-CREATE TYPE "BudgetPeriod"    AS ENUM ('weekly','monthly','yearly');
-CREATE TYPE "LoanType"        AS ENUM ('personal','mortgage','auto','student','credit','other');
-```
+### **Core Tables**
 
-### Tables
-
-#### accounts
+#### `accounts` (Wallets)
+Menyimpan dompet/akun user (e.g., BCA, DANA, Cash)
 ```sql
 CREATE TABLE accounts (
-  "id"         TEXT PRIMARY KEY,
-  "name"       TEXT NOT NULL,
-  "type"       "AccountType" NOT NULL,
-  "balance"    NUMERIC NOT NULL DEFAULT 0,
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name         TEXT NOT NULL,
+  balance      NUMERIC NOT NULL DEFAULT 0,
+  is_system    BOOLEAN NOT NULL DEFAULT false,
+  user_id      UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
   "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-#### categories
+#### `categories`
+Kategori transaksi (Income, Expense, Transfer)
 ```sql
 CREATE TABLE categories (
-  "id"         TEXT PRIMARY KEY,
-  "name"       TEXT NOT NULL,
-  "type"       "TransactionType" NOT NULL,
-  "color"      TEXT,
-  "icon"       TEXT,
-  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "is_system"  BOOLEAN NOT NULL DEFAULT false,
-  "user_id"    UUID REFERENCES auth.users(id) ON DELETE CASCADE
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name         TEXT NOT NULL,
+  type         TEXT NOT NULL, -- 'INCOME', 'EXPENSE', 'TRANSFER'
+  color        TEXT,
+  icon         TEXT,
+  is_system    BOOLEAN NOT NULL DEFAULT false,
+  user_id      UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-#### transactions
+#### `transactions`
+Record transaksi user
 ```sql
 CREATE TABLE transactions (
-  "id"         TEXT PRIMARY KEY,
-  "amount"     NUMERIC NOT NULL,
-  "type"       "TransactionType" NOT NULL,
-  "categoryId" TEXT REFERENCES categories(id) ON DELETE SET NULL,
-  "description" TEXT,
-  "date"       TIMESTAMPTZ NOT NULL,
-  "accountId"  TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  amount         NUMERIC NOT NULL,
+  type           TEXT NOT NULL, -- 'INCOME', 'EXPENSE', 'TRANSFER'
+  "categoryId"   UUID REFERENCES categories(id) ON DELETE SET NULL,
+  description    TEXT,
+  date           TIMESTAMPTZ NOT NULL,
+  "accountId"    UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  user_id        UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  "createdAt"    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-#### budgets
+#### `budgets`
+Budget management per category
 ```sql
 CREATE TABLE budgets (
-  "id"         TEXT PRIMARY KEY,
-  "categoryId" TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-  "amount"     NUMERIC NOT NULL,
-  "period"     "BudgetPeriod" NOT NULL,
-  "startDate"  TIMESTAMPTZ NOT NULL,
-  "endDate"    TIMESTAMPTZ NOT NULL,
-  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "categoryId"  UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  amount        NUMERIC NOT NULL,
+  period        TEXT NOT NULL, -- 'WEEKLY', 'MONTHLY', 'YEARLY'
+  "startDate"   TIMESTAMPTZ NOT NULL,
+  "endDate"     TIMESTAMPTZ NOT NULL,
+  user_id       UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-#### loans
+#### `loans`
+Loan tracking
 ```sql
 CREATE TABLE loans (
-  "id"               TEXT PRIMARY KEY,
-  "name"             TEXT NOT NULL,
-  "originalAmount"   NUMERIC NOT NULL,
-  "currentBalance"   NUMERIC NOT NULL,
-  "interestRate"     NUMERIC NOT NULL,
-  "monthlyPayment"   NUMERIC NOT NULL,
-  "nextPaymentDate"  TIMESTAMPTZ,
-  "loanType"         "LoanType" NOT NULL,
-  "createdAt"        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updatedAt"        TIMESTAMPTZ NOT NULL DEFAULT now()
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                TEXT NOT NULL,
+  "originalAmount"    NUMERIC NOT NULL,
+  "currentBalance"    NUMERIC NOT NULL,
+  "interestRate"      NUMERIC NOT NULL,
+  "monthlyPayment"    NUMERIC NOT NULL,
+  "nextPaymentDate"   TIMESTAMPTZ,
+  "loanType"          TEXT NOT NULL, -- 'PERSONAL', 'MORTGAGE', 'AUTO', etc.
+  user_id             UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-#### financial_goals
+#### `financial_goals`
+Financial goals tracking
 ```sql
 CREATE TABLE financial_goals (
-  "id"             TEXT PRIMARY KEY,
-  "name"           TEXT NOT NULL,
-  "targetAmount"   NUMERIC NOT NULL,
-  "currentAmount"  NUMERIC NOT NULL DEFAULT 0,
-  "targetDate"     TIMESTAMPTZ,
-  "category"       TEXT,
-  "description"    TEXT,
-  "createdAt"      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updatedAt"      TIMESTAMPTZ NOT NULL DEFAULT now()
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name              TEXT NOT NULL,
+  "targetAmount"    NUMERIC NOT NULL,
+  "currentAmount"   NUMERIC NOT NULL DEFAULT 0,
+  "targetDate"      TIMESTAMPTZ,
+  category          TEXT,
+  description       TEXT,
+  user_id           UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  "createdAt"       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-### Relationships (ringkas)
-- transactions.accountId → accounts.id
-- transactions.categoryId → categories.id
-- budgets.categoryId → categories.id
-- categories.user_id → auth.users.id
+#### `hidden_accounts`
+Track hidden wallets per user (soft delete for system accounts)
+```sql
+CREATE TABLE hidden_accounts (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  "account_id"  UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  "hidden_at"   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, "account_id")
+);
+```
 
-Catatan: jika Anda ingin semua data dibatasi per pengguna, tambahkan kolom "user_id" ke tabel terkait (mis. accounts, transactions, budgets, loans, financial_goals) dan aktifkan RLS.
+#### `hidden_categories`
+Track hidden categories per user (soft delete for system categories)
+```sql
+CREATE TABLE hidden_categories (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  "category_id"   UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  "hidden_at"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, "category_id")
+);
+```
+
+### **Key Relationships**
+- `transactions.accountId` → `accounts.id` (Many-to-One)
+- `transactions.categoryId` → `categories.id` (Many-to-One)
+- `budgets.categoryId` → `categories.id` (Many-to-One)
+- `hidden_accounts.account_id` → `accounts.id` (Many-to-One)
+- `hidden_categories.category_id` → `categories.id` (Many-to-One)
+- All tables with `user_id` → `auth.users.id` (Multi-tenancy)
+
+### **Security (RLS)**
+Row Level Security enabled untuk semua tables:
+- Users hanya bisa akses data mereka sendiri
+- System data (`is_system = true`) accessible untuk semua authenticated users
+- Hidden items filtered per user via JOIN dengan `hidden_*` tables
 ## 🔧 Installation & Setup
 
 ### **Prerequisites**

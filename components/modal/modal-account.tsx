@@ -19,7 +19,11 @@ interface Account {
     user_id?: string
 }
 
-export function CategoryAccount() {
+interface CategoryAccountProps {
+    onAccountAdded?: () => void
+}
+
+export function CategoryAccount(props: CategoryAccountProps) {
     const [accounts, setAccounts] = useState<Account[]>([])
     const [hiddenAccounts, setHiddenAccounts] = useState<any[]>([])
     const [isOpen, setIsOpen] = useState(false)
@@ -27,8 +31,7 @@ export function CategoryAccount() {
     const [loading, setLoading] = useState(false)
     const [newAccount, setNewAccount] = useState({
         name: '',
-        type: 'cash',
-        balance: 0,
+        balance: '', // String agar placeholder visible
     })
 
 
@@ -62,8 +65,11 @@ export function CategoryAccount() {
 
     useEffect(() => {
         if (isOpen) {
-            fetchAccounts()
-            fetchHiddenAccounts()
+            // BONUS: Parallel fetch untuk performance
+            Promise.all([
+                fetchAccounts(),
+                fetchHiddenAccounts()
+            ])
         }
     }, [isOpen])
 
@@ -72,24 +78,32 @@ export function CategoryAccount() {
             toast.error('Account name is required')
             return
         }
-        if (accounts.find(a => a.name.toLowerCase() === newAccount.name.trim().toLowerCase() && a.type === newAccount.type)) {
-            toast.error('Account with this name and type already exists')
+        if (accounts.find(a => a.name.toLowerCase() === newAccount.name.trim().toLowerCase())) {
+            toast.error('Account with this name already exists')
             return
         }
 
         setLoading(true)
         try {
+            // STEP 4: Convert balance string → number saat submit
+            const payload = {
+                name: newAccount.name,
+                balance: Number(newAccount.balance || 0)
+            }
+
             const response = await fetch('/api/accounts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newAccount)
+                body: JSON.stringify(payload)
             })
 
             if (response.ok) {
-                toast.success('Account created successfully')
-                setNewAccount({ name: '', type: 'cash', balance: 0 })
+                toast.success('Wallet created successfully')
+                setNewAccount({ name: '', balance: '' })
                 setShowAddForm(false)
                 fetchAccounts()
+                // STEP 2: Notify parent untuk refresh dropdown
+                props.onAccountAdded?.()
             } else {
                 const error = await response.json()
                 const errorMessage = error.error || 'Failed to create account'
@@ -133,6 +147,8 @@ export function CategoryAccount() {
                 toast.success(successMessage)
                 fetchAccounts()
                 fetchHiddenAccounts()
+                // STEP 2: Notify parent untuk refresh dropdown
+                props.onAccountAdded?.()
             } else {
                 const error = await response.json()
                 toast.error(error.error || 'Failed to process account')
@@ -149,9 +165,11 @@ export function CategoryAccount() {
             })
 
             if (response.ok) {
-                toast.success('Account restored successfully')
+                toast.success('Wallet restored successfully')
                 fetchAccounts()
                 fetchHiddenAccounts()
+                // STEP 2: Notify parent untuk refresh dropdown
+                props.onAccountAdded?.()
             } else {
                 const error = await response.json()
                 toast.error(error.error || 'Failed to restore account')
@@ -160,126 +178,112 @@ export function CategoryAccount() {
             toast.error('Failed to restore account')
         }
     }
+    
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                     <Settings className="mr-2 h-4 w-4" />
-                    Manage Account Wallet
+                    Manage Wallet
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Account Management</DialogTitle>
+                    <DialogTitle>Wallet Management</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-6">
-                    {/* Add Account Form */}
+                    {/* Add Wallet Form */}
                     <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold">Accounts</h3>
+                        <h3 className="text-lg font-semibold">My Wallets</h3>
                         <Button
                             onClick={() => setShowAddForm(!showAddForm)}
                             size="sm"
                         >
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Account
+                            Add Wallet
                         </Button>
                     </div>
 
                     {showAddForm && (
                         <div className="border rounded-lg p-4 space-y-4">
-                            <h4 className="font-medium">Create New Account</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <h4 className="font-medium">Create New Wallet</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <Label htmlFor="account-name" className="mb-2">Name</Label>
+                                    <Label htmlFor="wallet-name">Wallet Name</Label>
                                     <Input
-                                        id="account-name"
+                                        id="wallet-name"
                                         value={newAccount.name}
                                         onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
-                                        placeholder="Account name"
+                                        placeholder="e.g., BCA, DANA, Mandiri"
                                     />
                                 </div>
                                 <div>
-                                    <Label htmlFor="account-type" className="mb-2">Type</Label>
-                                    <Select value={newAccount.type} onValueChange={(value) => setNewAccount({ ...newAccount, type: value })}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="cash">Cash</SelectItem>
-                                            <SelectItem value="bank">Bank</SelectItem>
-                                            <SelectItem value="credit">Credit</SelectItem>
-                                            <SelectItem value="investment">Investment</SelectItem>
-                                            <SelectItem value="loan">Loan</SelectItem>
-                                            <SelectItem value="other">Other</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div>
-                                    <Label htmlFor="account-balance" className="mb-2">Initial Balance</Label>
+                                    <Label htmlFor="wallet-balance">Initial Balance</Label>
                                     <Input
-                                        id="account-balance"
+                                        id="wallet-balance"
                                         type="number"
                                         value={newAccount.balance}
-                                        onChange={(e) => setNewAccount({ ...newAccount, balance: Number(e.target.value) })}
+                                        onChange={(e) => setNewAccount({ ...newAccount, balance: e.target.value })}
                                         placeholder="0"
                                     />
                                 </div>
-                                <div className="flex items-end">
-                                    <Button onClick={handleAddAccount} disabled={loading} className="w-full cursor-pointer">
-                                        {loading ? 'Creating...' : 'Create'}
+                                <div className="md:col-span-2 flex justify-end">
+                                    <Button onClick={handleAddAccount} disabled={loading} className="w-full md:w-auto cursor-pointer">
+                                        {loading ? 'Creating...' : 'Create Wallet'}
                                     </Button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Accounts List */}
-                    <div className="space-y-4">
-                        {['cash', 'bank', 'credit', 'investment', 'loan', 'other'].map(type => {
-                            const typeAccounts = accounts.filter(acc => acc.type === type)
-
-                            return (
-                                <div key={type} className="border rounded-lg p-4">
-                                    <h4 className="font-medium mb-3">{type.toUpperCase()} Accounts ({typeAccounts.length})</h4>
-                                    <div className="grid gap-2">
-                                        {typeAccounts.map(account => (
-                                            <div key={account.id} className="flex items-center justify-between p-2 border rounded hover:bg-pink-950">
-                                                <div className="flex items-center space-x-3">
-                                                    <span className="font-medium">{account.name}</span>
-                                                    <Badge variant="outline" className="text-xs">{account.balance.toLocaleString()}</Badge>
-                                                    {account.is_system && (
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            System
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDeleteAccount(account.id)}
-                                                    className="text-red-600 hover:text-red-700 cursor-pointer"
-                                                    aria-label={account.is_system ? "Hide account" : "Delete account"}
-                                                    title={account.is_system ? "Hide this account" : "Delete account"}
-                                                >
-                                                    {account.is_system ? (
-                                                        <EyeOff className="h-4 w-4" />
-                                                    ) : (
-                                                        <Trash2 className="h-4 w-4" />
-                                                    )}
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
+                    {/* Wallets List - FLAT (no grouping) */}
+                    <div className="border rounded-lg p-4">
+                        <h4 className="font-medium mb-3">All Wallets ({accounts.length})</h4>
+                        <div className="grid gap-2">
+                            {/* STEP 5: Empty state */}
+                            {accounts.length === 0 ? (
+                                <div className="text-sm text-muted-foreground p-4 text-center border-2 border-dashed rounded">
+                                    No wallets yet. Add your first wallet above!
                                 </div>
-                            )
-                        })}
+                            ) : (
+                                accounts.map(account => (
+                                    <div key={account.id} className="flex items-center justify-between p-3 border rounded hover:bg-accent/50 transition-colors">
+                                        <div className="flex items-center space-x-3">
+                                            <span className="font-medium">{account.name}</span>
+                                            <Badge variant="outline" className="text-xs">
+                                                Rp {account.balance.toLocaleString('id-ID')}
+                                            </Badge>
+                                            {account.is_system && (
+                                                <Badge variant="secondary" className="text-xs">
+                                                    System
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDeleteAccount(account.id)}
+                                            className="text-red-600 hover:text-red-700 cursor-pointer"
+                                            aria-label={account.is_system ? "Hide wallet" : "Delete wallet"}
+                                            title={account.is_system ? "Hide this wallet" : "Delete wallet"}
+                                        >
+                                            {account.is_system ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Trash2 className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                    {/* Hidden Accounts Section */}
+                    {/* Hidden Wallets Section */}
                     {hiddenAccounts.length > 0 && (
                         <div className="border rounded-lg p-4 bg-muted/50">
-                            <h3 className="text-lg font-semibold mb-3">Hidden Accounts ({hiddenAccounts.length})</h3>
+                            <h3 className="text-lg font-semibold mb-3">Hidden Wallets ({hiddenAccounts.length})</h3>
                             <div className="grid gap-2">
                                 {hiddenAccounts.map(item => {
                                     const account = item.account
@@ -301,8 +305,8 @@ export function CategoryAccount() {
                                                 size="sm"
                                                 onClick={() => handleRestoreAccount(account.id)}
                                                 className="text-green-600 hover:text-green-700 cursor-pointer"
-                                                aria-label="Restore account"
-                                                title="Restore account"
+                                                aria-label="Restore wallet"
+                                                title="Restore wallet"
                                             >
                                                 <Eye className="h-4 w-4" />
                                             </Button>

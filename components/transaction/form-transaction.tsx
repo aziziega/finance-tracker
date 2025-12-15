@@ -29,12 +29,20 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("")
   const [refreshKey, setRefreshKey] = useState(0)
 
+  // STEP 3: Account/Wallet state management
+  const [accounts, setAccounts] = useState<any[]>([])
+  const [selectedAccount, setSelectedAccount] = useState<string>("")
+  const [selectedToAccount, setSelectedToAccount] = useState<string>("")
+  const [refreshAccountKey, setRefreshAccountKey] = useState(0)
+
+  // Amount formatting state
+  const [amount, setAmount] = useState<string>("")
+  const [displayAmount, setDisplayAmount] = useState<string>("")
+
   const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/categories')
       const data = await response.json()
-
-
       setCategories(data.categories || [])
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -42,18 +50,61 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
     }
   }, [])
 
+  // STEP 3: Fetch accounts (sama pattern dengan categories)
+  const fetchAccounts = useCallback(async () => {
+    try {
+      const response = await fetch('/api/accounts')
+      const data = await response.json()
+      setAccounts(data.accounts || [])
+    } catch (error) {
+      console.error('Error fetching accounts:', error)
+      setAccounts([])
+    }
+  }, [])
+
   useEffect(() => {
     fetchCategories()
   }, [refreshKey, fetchCategories])
+
+  // STEP 3: Effect untuk fetch accounts
+  useEffect(() => {
+    fetchAccounts()
+  }, [refreshAccountKey, fetchAccounts])
 
   const handleCategoryAdded = () => {
     // Trigger re-fetch ketika kategori baru ditambah
     setRefreshKey(prev => prev + 1)
   }
 
+  // STEP 3: Handler untuk account updates (pattern sama dengan category)
+  const handleAccountAdded = () => {
+    setRefreshAccountKey(prev => prev + 1)
+  }
+
   const handleTransactionTypeChange = (newType: string) => {
     setTransactionType(newType)
     setSelectedCategory("")
+  }
+
+  // Format amount dengan thousand separator
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value
+
+    // Remove semua non-digit characters (kecuali .)
+    const rawValue = input.replace(/[^\d]/g, '')
+
+    if (rawValue === '') {
+      setAmount('')
+      setDisplayAmount('')
+      return
+    }
+
+    // Simpan raw value (untuk submit ke API nanti)
+    setAmount(rawValue)
+
+    // Format dengan thousand separator untuk display
+    const formatted = Number(rawValue).toLocaleString('id-ID')
+    setDisplayAmount(formatted)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -94,8 +145,15 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
         <div className="space-y-2">
           <Label htmlFor="amount">Amount</Label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
-            <Input id="amount" type="number" step="0.01" placeholder="0.00" className="pl-7" />
+            <span className="absolute inset-y-0 left-0 flex items-center pl-2 text-muted-foreground">Rp</span>
+            <Input
+              id="amount"
+              type="text"
+              value={displayAmount}
+              onChange={handleAmountChange}
+              placeholder="0"
+              className="pl-7"
+            />
           </div>
         </div>
       </div>
@@ -121,14 +179,17 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          {/* Modal Categor */}
-          <CategoryModal onCategoryAdded={handleCategoryAdded} />
+          {/* Modal Category - Pass transaction type untuk filter */}
+          <CategoryModal
+            onCategoryAdded={handleCategoryAdded}
+            transactionType={transactionType}
+          />
           <Select
             value={selectedCategory}
             onValueChange={setSelectedCategory}
           >
             <SelectTrigger className="w-full" id="category">
-              <SelectValue placeholder={`Select category`} />
+              <SelectValue placeholder={`Select ${transactionType.toUpperCase()} `} />
             </SelectTrigger>
             <SelectContent>
               {transactionType === "expense" ? (
@@ -178,34 +239,47 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="account">Account</Label>
-          <CategoryAccount />
-          <Select>
+          <Label htmlFor="account">Wallet</Label>
+          {/* STEP 3: Pass callback untuk real-time update */}
+          <CategoryAccount onAccountAdded={handleAccountAdded} />
+          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
             <SelectTrigger className="w-full" id="account">
-              <SelectValue placeholder="Select account" />
+              <SelectValue placeholder="Select wallet" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="checking">Main Checking</SelectItem>
-              <SelectItem value="savings">Savings Account</SelectItem>
-              <SelectItem value="credit">Credit Card</SelectItem>
-              <SelectItem value="cash">Cash</SelectItem>
+              {/* STEP 5: Empty state handling */}
+              {accounts.length === 0 ? (
+                <div className="p-2 text-sm text-muted-foreground text-center">
+                  No wallets available. Add one first!
+                </div>
+              ) : (
+                accounts.map(account => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name} - Rp {Number(account.balance || 0).toLocaleString('id-ID')}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
 
         {transactionType === "transfer" && (
-
           <div className="space-y-2">
-            <Label htmlFor="to-account">To Account</Label>
-            <Select>
+            <Label htmlFor="to-account">To Wallet</Label>
+            <Select value={selectedToAccount} onValueChange={setSelectedToAccount}>
               <SelectTrigger id="to-account">
-                <SelectValue placeholder="Select destination" />
+                <SelectValue placeholder="Select destination wallet" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="checking">Main Checking</SelectItem>
-                <SelectItem value="savings">Savings Account</SelectItem>
-                <SelectItem value="credit">Credit Card</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
+                {/* STEP 3: Filter out source wallet dari destination options */}
+                {accounts
+                  .filter(acc => acc.id !== selectedAccount)
+                  .map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} - Rp {Number(account.balance || 0).toLocaleString('id-ID')}
+                    </SelectItem>
+                  ))
+                }
               </SelectContent>
             </Select>
           </div>

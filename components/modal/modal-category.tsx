@@ -22,6 +22,7 @@ interface Category {
 
 interface CategoryModalProps {
     onCategoryAdded?: () => void
+    transactionType?: string  // 'expense' | 'income' | 'transfer'
 }
 
 export function CategoryModal(props: CategoryModalProps) {
@@ -39,9 +40,18 @@ export function CategoryModal(props: CategoryModalProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
     const [loading, setLoading] = useState(false)
+
+    // Default type berdasarkan transactionType yang aktif
+    const getDefaultType = () => {
+        if (props.transactionType) {
+            return props.transactionType.toUpperCase()
+        }
+        return 'EXPENSE'
+    }
+
     const [newCategory, setNewCategory] = useState({
         name: '',
-        type: 'EXPENSE',
+        type: getDefaultType(),
         icon: 'circle',
         color: colorGenerate(),
     })
@@ -81,6 +91,16 @@ export function CategoryModal(props: CategoryModalProps) {
             fetchHiddenCategories()
         }
     }, [isOpen])
+
+    // Update form type ketika transactionType berubah
+    useEffect(() => {
+        if (props.transactionType) {
+            setNewCategory(prev => ({
+                ...prev,
+                type: props.transactionType!.toUpperCase()
+            }))
+        }
+    }, [props.transactionType])
 
     const handleAddCategory = async () => {
         if (!newCategory.name.trim()) {
@@ -220,14 +240,26 @@ export function CategoryModal(props: CategoryModalProps) {
                                 </div>
                                 <div>
                                     <Label htmlFor="category-type">Type</Label>
-                                    <Select value={newCategory.type} onValueChange={(value) => setNewCategory({ ...newCategory, type: value })}>
+                                    <Select
+                                        value={newCategory.type}
+                                        onValueChange={(value) => setNewCategory({ ...newCategory, type: value })}
+                                        disabled={!!props.transactionType}
+                                    >
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="EXPENSE">Expense</SelectItem>
-                                            <SelectItem value="INCOME">Income</SelectItem>
-                                            <SelectItem value="TRANSFER">Transfer</SelectItem>
+                                            {props.transactionType ? (
+                                                <SelectItem value={props.transactionType.toUpperCase()}>
+                                                    {props.transactionType.charAt(0).toUpperCase() + props.transactionType.slice(1)}
+                                                </SelectItem>
+                                            ) : (
+                                                <>
+                                                    <SelectItem value="EXPENSE">Expense</SelectItem>
+                                                    <SelectItem value="INCOME">Income</SelectItem>
+                                                    <SelectItem value="TRANSFER">Transfer</SelectItem>
+                                                </>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -242,7 +274,11 @@ export function CategoryModal(props: CategoryModalProps) {
 
                     {/* Categories List */}
                     <div className="space-y-4">
-                        {['EXPENSE', 'INCOME', 'TRANSFER'].map(type => {
+                        {/* Filter types: jika transactionType ada, hanya show type tersebut */}
+                        {(props.transactionType
+                            ? [props.transactionType.toUpperCase()]
+                            : ['EXPENSE', 'INCOME', 'TRANSFER']
+                        ).map(type => {
                             const typeCategories = categories.filter(cat => cat.type === type)
 
                             return (

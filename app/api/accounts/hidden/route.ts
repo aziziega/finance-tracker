@@ -20,7 +20,6 @@ export async function GET() {
         accounts (
           id,
           name,
-          type,
           balance,
           is_system
         )
