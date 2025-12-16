@@ -7,55 +7,27 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      // User belum login: hanya tampilkan system accounts
-      const { data: accounts, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('is_system', true)
-        .order('name', { ascending: true })
-
-      if (error) {
-        console.log('Database error:', error)
-        return NextResponse.json({ 
-          error: error.message,
-          accounts: [],
-        }, { status: 500 })
-      }
-
-      return NextResponse.json({ accounts: accounts || [], success: true })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // ✅ User sudah login: ambil hidden accounts mereka
-    const { data: hiddenAccounts } = await supabase
-      .from('hidden_accounts')
-      .select('account_id')
-      .eq('user_id', user.id)
-
-    const hiddenIds = (hiddenAccounts || []).map(h => h.account_id)
-
-    // Query: system accounts + custom user accounts
+    // Get all user's accounts (both default and custom)
     const { data: accounts, error } = await supabase
       .from('accounts')
       .select('*')
-      .or(`is_system.eq.true,user_id.eq.${user.id}`)
-      .order('is_system', { ascending: false })
+      .eq('user_id', user.id)
+      .order('is_default', { ascending: false })
       .order('name', { ascending: true })
 
     if (error) {
       console.log('Database error:', error)
       return NextResponse.json({ 
-        error: error.message, 
+        error: error.message,
         accounts: [],
       }, { status: 500 })
     }
 
-    // ✅ Filter out hidden accounts
-    const visibleAccounts = (accounts || []).filter(
-      acc => !hiddenIds.includes(acc.id)
-    )
-
     return NextResponse.json({ 
-      accounts: visibleAccounts, 
+      accounts: accounts || [], 
       success: true 
     })
   } catch (error) {
@@ -87,7 +59,7 @@ export async function POST(request: NextRequest) {
       .insert([{
         name,
         balance: balance || 0,
-        is_system: false, // ✅ User account
+        is_default: false, // User custom account
         user_id: user.id
       }])
       .select()

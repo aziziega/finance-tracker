@@ -120,8 +120,8 @@ CREATE TABLE accounts (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT NOT NULL,
   balance      NUMERIC NOT NULL DEFAULT 0,
-  is_system    BOOLEAN NOT NULL DEFAULT false,
-  user_id      UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_default   BOOLEAN NOT NULL DEFAULT false,
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
   "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -136,8 +136,8 @@ CREATE TABLE categories (
   type         TEXT NOT NULL, -- 'INCOME', 'EXPENSE', 'TRANSFER'
   color        TEXT,
   icon         TEXT,
-  is_system    BOOLEAN NOT NULL DEFAULT false,
-  user_id      UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_default   BOOLEAN NOT NULL DEFAULT false,
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
@@ -238,15 +238,13 @@ CREATE TABLE hidden_categories (
 - `transactions.accountId` → `accounts.id` (Many-to-One)
 - `transactions.categoryId` → `categories.id` (Many-to-One)
 - `budgets.categoryId` → `categories.id` (Many-to-One)
-- `hidden_accounts.account_id` → `accounts.id` (Many-to-One)
-- `hidden_categories.category_id` → `categories.id` (Many-to-One)
 - All tables with `user_id` → `auth.users.id` (Multi-tenancy)
 
 ### **Security (RLS)**
 Row Level Security enabled untuk semua tables:
-- Users hanya bisa akses data mereka sendiri
-- System data (`is_system = true`) accessible untuk semua authenticated users
-- Hidden items filtered per user via JOIN dengan `hidden_*` tables
+- Users hanya bisa akses data mereka sendiri (filtered by user_id)
+- Default data (`is_default = true`) dibuat otomatis untuk setiap user baru
+- User dapat menghapus semua data termasuk default data
 ## 🔧 Installation & Setup
 
 ### **Prerequisites**

@@ -15,10 +15,10 @@ export async function DELETE(
 
     const { id: accountId } = await params
 
-    // ✅ Cek apakah account adalah system account
+    // Verify account exists and belongs to user
     const { data: account } = await supabase
       .from('accounts')
-      .select('is_system, user_id')
+      .select('user_id')
       .eq('id', accountId)
       .single()
 
@@ -28,38 +28,13 @@ export async function DELETE(
       }, { status: 404 })
     }
 
-    // ✅ Jika SYSTEM ACCOUNT: hide saja (tidak delete dari DB)
-    if (account.is_system) {
-      const { error } = await supabase
-        .from('hidden_accounts')
-        .insert({ 
-          user_id: user.id, 
-          account_id: accountId 
-        })
-
-      if (error) {
-        // Jika sudah di-hide sebelumnya (duplicate), anggap sukses
-        if (error.code === '23505') {
-          return NextResponse.json({ success: true, hidden: true })
-        }
-        throw error
-      }
-
-      return NextResponse.json({ 
-        success: true, 
-        hidden: true,
-        message: 'System account hidden successfully'
-      })
-    }
-
-    // ✅ Jika CUSTOM ACCOUNT: cek ownership & transactions
     if (account.user_id !== user.id) {
       return NextResponse.json({ 
         error: 'Cannot delete account from other user' 
       }, { status: 403 })
     }
 
-    // Cek apakah digunakan di transactions
+    // Check if account is being used in transactions
     const { data: transactions } = await supabase
       .from('transactions')
       .select('id')
@@ -72,7 +47,7 @@ export async function DELETE(
       }, { status: 400 })
     }
 
-    // ✅ Delete custom account dari DB
+    // Hard delete the account
     const { error } = await supabase
       .from('accounts')
       .delete()
@@ -82,9 +57,8 @@ export async function DELETE(
     if (error) throw error
 
     return NextResponse.json({ 
-      success: true, 
-      deleted: true,
-      message: 'Custom account deleted successfully'
+      success: true,
+      message: 'Account deleted successfully'
     })
   } catch (error) {
     console.error('Delete account error:', error)

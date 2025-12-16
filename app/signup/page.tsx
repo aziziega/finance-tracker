@@ -23,17 +23,23 @@ export default function SignUp() {
         }
     }, [user, loading, router]);
 
-    const handleSignup = async (e: any) => {
+    const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         // Prevent multiple submissions
         if (isSubmitting) return;
 
-        const email: string = e.target[0]?.value;
-        const password: string = e.target[1]?.value;
+        const formData = new FormData(e.currentTarget);
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
 
         if (!email || !password) {
             toast.error('Please enter email and password');
+            return;
+        }
+
+        if (password.length < 6) {
+            toast.error('Password must be at least 6 characters');
             return;
         }
 
@@ -52,15 +58,17 @@ export default function SignUp() {
                 return;
             }
 
-            // Enforce explicit login after signup: sign out in case a session was created and redirect to login
-            toast.success('Signup successful! Please login to continue.');
-            try {
-                await supabase.auth.signOut();
-            } catch {
-                // Ignore sign out errors
-            }
-            router.replace('/signup');
+            // ✅ SUCCESS: Sign out and redirect to login
+            toast.success('Account created! Please login to continue.');
+
+            // Sign out to force explicit login
+            await supabase.auth.signOut();
+
+            // Redirect to login page
+            router.push('/login');
+
         } catch (err) {
+            console.error('Signup error:', err);
             toast.error('An unexpected error occurred');
             setIsSubmitting(false);
         }
@@ -122,9 +130,10 @@ export default function SignUp() {
                                 </Label>
                                 <Input
                                     type="email"
-                                    // required
                                     name="email"
                                     id="email"
+                                    required
+                                    placeholder="example@gmail.com"
                                 />
                             </div>
 
@@ -148,9 +157,11 @@ export default function SignUp() {
                                 </div>
                                 <Input
                                     type="password"
-                                    // required
                                     name="password"
                                     id="password"
+                                    required
+                                    minLength={6}
+                                    placeholder="Min. 6 characters"
                                     className="input sz-md variant-mixed"
                                 />
                             </div>

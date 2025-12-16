@@ -15,10 +15,10 @@ export async function DELETE(
 
     const { id: categoryId } = await params
 
-    // ✅ Cek apakah category adalah system category
+    // Verify category exists and belongs to user
     const { data: category } = await supabase
       .from('categories')
-      .select('is_system, user_id')
+      .select('user_id')
       .eq('id', categoryId)
       .single()
 
@@ -28,38 +28,13 @@ export async function DELETE(
       }, { status: 404 })
     }
 
-    // ✅ Jika SYSTEM CATEGORY: hide saja (tidak delete dari DB)
-    if (category.is_system) {
-      const { error } = await supabase
-        .from('hidden_categories')
-        .insert({ 
-          user_id: user.id, 
-          category_id: categoryId 
-        })
-
-      if (error) {
-        // Jika sudah di-hide sebelumnya (duplicate), anggap sukses
-        if (error.code === '23505') {
-          return NextResponse.json({ success: true, hidden: true })
-        }
-        throw error
-      }
-
-      return NextResponse.json({ 
-        success: true, 
-        hidden: true,
-        message: 'System category hidden successfully'
-      })
-    }
-
-    // ✅ Jika CUSTOM CATEGORY: cek ownership & transactions
     if (category.user_id !== user.id) {
       return NextResponse.json({ 
         error: 'Cannot delete category from other user' 
       }, { status: 403 })
     }
 
-    // Cek apakah digunakan di transactions
+    // Check if category is being used in transactions
     const { data: transactions } = await supabase
       .from('transactions')
       .select('id')
@@ -72,7 +47,7 @@ export async function DELETE(
       }, { status: 400 })
     }
 
-    // ✅ Delete custom category dari DB
+    // Hard delete the category
     const { error } = await supabase
       .from('categories')
       .delete()
@@ -82,9 +57,8 @@ export async function DELETE(
     if (error) throw error
 
     return NextResponse.json({ 
-      success: true, 
-      deleted: true,
-      message: 'Custom category deleted successfully'
+      success: true,
+      message: 'Category deleted successfully'
     })
   } catch (error) {
     console.error('Delete category error:', error)

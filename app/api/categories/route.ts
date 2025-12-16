@@ -7,38 +7,15 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      // User belum login: hanya tampilkan system categories
-      const { data: categories, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_system', true)
-        .order('name', { ascending: true })
-
-      if (error) {
-        console.log('Database error:', error)
-        return NextResponse.json({ 
-          error: error.message, 
-          categories: [],
-        }, { status: 500 })
-      }
-
-      return NextResponse.json({ categories: categories || [], success: true })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // ✅ User sudah login: ambil hidden categories mereka
-    const { data: hiddenCategories } = await supabase
-      .from('hidden_categories')
-      .select('category_id')
-      .eq('user_id', user.id)
-
-    const hiddenIds = (hiddenCategories || []).map(h => h.category_id)
-
-    // Query: system categories + custom user categories
+    // Get all user's categories (both default and custom)
     const { data: categories, error } = await supabase
       .from('categories')
       .select('*')
-      .or(`is_system.eq.true,user_id.eq.${user.id}`)
-      .order('is_system', { ascending: false })
+      .eq('user_id', user.id)
+      .order('is_default', { ascending: false })
       .order('name', { ascending: true })
 
     if (error) {
@@ -49,13 +26,8 @@ export async function GET() {
       }, { status: 500 })
     }
 
-    // ✅ Filter out hidden categories
-    const visibleCategories = (categories || []).filter(
-      cat => !hiddenIds.includes(cat.id)
-    )
-
     return NextResponse.json({ 
-      categories: visibleCategories, 
+      categories: categories || [], 
       success: true 
     })
   } catch (error) {
@@ -89,7 +61,7 @@ export async function POST(request: NextRequest) {
         type: type.toUpperCase(),
         icon: icon || 'circle',
         color: color || '#6B7280',
-        is_system: false, // ✅ User category
+        is_default: false, // User custom category
         user_id: user.id
       }])
       .select()

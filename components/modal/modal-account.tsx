@@ -7,16 +7,15 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, Settings, EyeOff, Eye } from 'lucide-react'
+import { Trash2, Plus, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Account {
     id: string
     name: string
-    type: string
     balance: number
-    is_system: boolean
-    user_id?: string
+    is_default: boolean
+    user_id: string
 }
 
 interface CategoryAccountProps {
@@ -25,7 +24,6 @@ interface CategoryAccountProps {
 
 export function CategoryAccount(props: CategoryAccountProps) {
     const [accounts, setAccounts] = useState<Account[]>([])
-    const [hiddenAccounts, setHiddenAccounts] = useState<any[]>([])
     const [isOpen, setIsOpen] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -42,8 +40,7 @@ export function CategoryAccount(props: CategoryAccountProps) {
             const data = await response.json()
             const normalized = (data.accounts || []).map((a: any) => ({
                 ...a,
-                type: String(a.type || '').toLowerCase(),
-                is_system: a.is_system === true || a.is_system === 'true' || a.is_system === 1,
+                is_default: a.is_default === true || a.is_default === 'true' || a.is_default === 1,
                 balance: Number(a.balance || 0),
             }))
             setAccounts(normalized)
@@ -52,25 +49,9 @@ export function CategoryAccount(props: CategoryAccountProps) {
         }
     }
 
-    const fetchHiddenAccounts = async () => {
-        try {
-            const response = await fetch('/api/accounts/hidden')
-            if (response.ok) {
-                const data = await response.json()
-                setHiddenAccounts(data.accounts || [])
-            }
-        } catch (error) {
-            console.log('Failed to fetch hidden accounts:', error)
-        }
-    }
-
     useEffect(() => {
         if (isOpen) {
-            // BONUS: Parallel fetch untuk performance
-            Promise.all([
-                fetchAccounts(),
-                fetchHiddenAccounts()
-            ])
+            fetchAccounts()
         }
     }, [isOpen])
 
@@ -125,7 +106,6 @@ export function CategoryAccount(props: CategoryAccountProps) {
                 setDisplayBalance('')
                 setShowAddForm(false)
                 fetchAccounts()
-                // STEP 2: Notify parent untuk refresh dropdown
                 props.onAccountAdded?.()
             } else {
                 const error = await response.json()
@@ -148,11 +128,10 @@ export function CategoryAccount(props: CategoryAccountProps) {
 
     const handleDeleteAccount = async (accountId: string) => {
         const account = accounts.find(a => a.id === accountId)
-        const isSystem = account?.is_system
 
-        const confirmMessage = isSystem
-            ? 'Hide this system account from your view?'
-            : 'Are you sure you want to delete this account?'
+        const confirmMessage = account?.is_default
+            ? 'Delete this default wallet? This cannot be undone.'
+            : 'Are you sure you want to delete this wallet?'
 
         if (!confirm(confirmMessage)) return
 
@@ -162,43 +141,15 @@ export function CategoryAccount(props: CategoryAccountProps) {
             })
 
             if (response.ok) {
-                const result = await response.json()
-                const successMessage = result.hidden
-                    ? 'Account hidden successfully'
-                    : 'Account deleted successfully'
-
-                toast.success(successMessage)
+                toast.success('Wallet deleted successfully')
                 fetchAccounts()
-                fetchHiddenAccounts()
-                // STEP 2: Notify parent untuk refresh dropdown
                 props.onAccountAdded?.()
             } else {
                 const error = await response.json()
-                toast.error(error.error || 'Failed to process account')
+                toast.error(error.error || 'Failed to delete wallet')
             }
         } catch (error) {
-            toast.error('Failed to process account')
-        }
-    }
-
-    const handleRestoreAccount = async (accountId: string) => {
-        try {
-            const response = await fetch(`/api/accounts/${accountId}/unhide`, {
-                method: 'POST'
-            })
-
-            if (response.ok) {
-                toast.success('Wallet restored successfully')
-                fetchAccounts()
-                fetchHiddenAccounts()
-                // STEP 2: Notify parent untuk refresh dropdown
-                props.onAccountAdded?.()
-            } else {
-                const error = await response.json()
-                toast.error(error.error || 'Failed to restore account')
-            }
-        } catch (error) {
-            toast.error('Failed to restore account')
+            toast.error('Failed to delete wallet')
         }
     }
 
@@ -278,9 +229,9 @@ export function CategoryAccount(props: CategoryAccountProps) {
                                             <Badge variant="outline" className="text-xs">
                                                 Rp {account.balance.toLocaleString('id-ID')}
                                             </Badge>
-                                            {account.is_system && (
+                                            {account.is_default && (
                                                 <Badge variant="secondary" className="text-xs">
-                                                    System
+                                                    Default
                                                 </Badge>
                                             )}
                                         </div>
@@ -289,56 +240,16 @@ export function CategoryAccount(props: CategoryAccountProps) {
                                             size="sm"
                                             onClick={() => handleDeleteAccount(account.id)}
                                             className="text-red-600 hover:text-red-700 cursor-pointer"
-                                            aria-label={account.is_system ? "Hide wallet" : "Delete wallet"}
-                                            title={account.is_system ? "Hide this wallet" : "Delete wallet"}
+                                            aria-label="Delete wallet"
+                                            title="Delete wallet"
                                         >
-                                            {account.is_system ? (
-                                                <EyeOff className="h-4 w-4" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
+                                            <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>
                                 ))
                             )}
                         </div>
                     </div>
-                    {/* Hidden Wallets Section */}
-                    {hiddenAccounts.length > 0 && (
-                        <div className="border rounded-lg p-4 bg-muted/50">
-                            <h3 className="text-lg font-semibold mb-3">Hidden Wallets ({hiddenAccounts.length})</h3>
-                            <div className="grid gap-2">
-                                {hiddenAccounts.map(item => {
-                                    const account = item.account
-                                    if (!account) return null
-
-                                    return (
-                                        <div key={account.id} className="flex items-center justify-between p-2 border rounded bg-background/50">
-                                            <div className="flex items-center space-x-3">
-                                                <span className="font-medium opacity-60">{account.name}</span>
-                                                <Badge variant="outline" className="text-xs">{account.type}</Badge>
-                                                {account.is_system && (
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        System
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleRestoreAccount(account.id)}
-                                                className="text-green-600 hover:text-green-700 cursor-pointer"
-                                                aria-label="Restore wallet"
-                                                title="Restore wallet"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )}
                 </div>
             </DialogContent>
         </Dialog>
