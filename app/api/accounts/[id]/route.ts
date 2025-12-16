@@ -67,3 +67,80 @@ export async function DELETE(
     }, { status: 500 })
   }
 }
+
+
+// 1. TAMBAHKAN PUT ENDPOINT DI app/api/accounts/[id]/route.ts
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id: accountId } = await params
+    const { name, balance } = await request.json()
+
+    // Validate input
+    if (!name && balance === undefined) {
+      return NextResponse.json({ 
+        error: 'At least name or balance is required' 
+      }, { status: 400 })
+    }
+
+    // Verify account exists and belongs to user
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('id', accountId)
+      .single()
+
+    if (!account) {
+      return NextResponse.json({ 
+        error: 'Account not found' 
+      }, { status: 404 })
+    }
+
+    if (account.user_id !== user.id) {
+      return NextResponse.json({ 
+        error: 'Cannot update account from other user' 
+      }, { status: 403 })
+    }
+
+    // Prepare update data
+    const updateData: any = {}
+    if (name) updateData.name = name
+    if (balance !== undefined) updateData.balance = Number(balance)
+
+    // Update account
+    const { data: updatedAccount, error } = await supabase
+      .from('accounts')
+      .update(updateData)
+      .eq('id', accountId)
+      .eq('user_id', user.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Update account error:', error)
+      return NextResponse.json({ 
+        error: error.message || 'Failed to update account' 
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ 
+      account: updatedAccount,
+      success: true,
+      message: 'Account updated successfully'
+    })
+  } catch (error) {
+    console.error('Update account error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to update account' 
+    }, { status: 500 })
+  }
+}

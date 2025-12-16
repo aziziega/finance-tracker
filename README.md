@@ -10,6 +10,7 @@ A modern, full-stack personal finance management application built with Next.js 
   - Protected routes with middleware
   - Session management with cookies
   - Auto-redirect logic for authenticated/unauthenticated users
+  - Auto-initialize default wallets & categories on signup
 
 - **Dashboard Overview**
   - Modern, responsive UI with dark/light theme
@@ -17,24 +18,45 @@ A modern, full-stack personal finance management application built with Next.js 
   - Recent transactions display
   - Account balance overview
 
-- **Transaction Management**
-  - Dynamic transaction form
-  - Category-based transaction types (Income, Expense, Transfer)
-  - Real-time category loading from database
+- **Wallet Management** ✨
+  - Create, edit, delete wallets
+  - Real-time balance updates
+  - Number formatting (Rp 1.000.000)
+  - Inline edit mode with pencil icon
+  - Default wallets for new users
+
+- **Category Management** ✨
+  - Create, delete categories
+  - Type-based filtering (INCOME, EXPENSE, TRANSFER)
+  - Color & icon customization
+  - Default categories for new users
+
+- **Transaction Management** ✨
+  - Create transactions (Income, Expense, Transfer)
+  - Transfer between wallets with balance validation
+  - Real-time balance updates
+  - Amount formatting with thousand separator
+  - Date picker integration
+  - Description support
 
 - **API Infrastructure**
   - RESTful API routes with Next.js App Router
+  - GET/POST/PUT/DELETE endpoints
   - Supabase integration for database operations
   - Type-safe API endpoints with TypeScript
+  - Proper error handling & rollback
+  - Ownership verification
 
 ### 🚧 **In Development**
-- Account management (CRUD operations)
-- Transaction history and filtering
-- Financial goals tracking
-- Loan management
-- Savings accounts
-- Analytics and reports
-- Data export functionality
+- Transaction history page with filtering & search
+- Budget management per category
+- Financial goals tracking with progress
+- Loan management & payment tracking
+- Savings accounts with interest calculation
+- Analytics dashboard & charts
+- Data export (CSV, PDF)
+- Recurring transactions
+- Multi-currency support
 
 ## 🛠️ Tech Stack
 
@@ -123,8 +145,15 @@ CREATE TABLE accounts (
   is_default   BOOLEAN NOT NULL DEFAULT false,
   user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+  "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  
+  -- ✅ CONSTRAINT: Setiap user bisa punya wallet dengan nama yang sama
+  CONSTRAINT accounts_name_user_unique UNIQUE (name, user_id)
 );
+
+-- Indexes
+CREATE INDEX idx_accounts_user_id ON accounts(user_id);
+CREATE INDEX idx_accounts_is_default ON accounts(is_default);
 ```
 
 #### `categories`
@@ -133,30 +162,43 @@ Kategori transaksi (Income, Expense, Transfer)
 CREATE TABLE categories (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT NOT NULL,
-  type         TEXT NOT NULL, -- 'INCOME', 'EXPENSE', 'TRANSFER'
+  type         TEXT NOT NULL CHECK (type IN ('INCOME', 'EXPENSE', 'TRANSFER')),
   color        TEXT,
   icon         TEXT,
   is_default   BOOLEAN NOT NULL DEFAULT false,
   user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  
+  -- ✅ CONSTRAINT: Setiap user bisa punya category dengan nama yang sama
+  CONSTRAINT categories_name_user_unique UNIQUE (name, user_id)
 );
+
+-- Indexes
+CREATE INDEX idx_categories_user_id ON categories(user_id);
+CREATE INDEX idx_categories_type ON categories(type);
+CREATE INDEX idx_categories_is_default ON categories(is_default);
 ```
 
 #### `transactions`
-Record transaksi user
+Record transaksi user (Income, Expense, Transfer)
 ```sql
 CREATE TABLE transactions (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  amount         NUMERIC NOT NULL,
-  type           TEXT NOT NULL, -- 'INCOME', 'EXPENSE', 'TRANSFER'
-  "categoryId"   UUID REFERENCES categories(id) ON DELETE SET NULL,
+  amount         NUMERIC NOT NULL CHECK (amount > 0),
+  type           TEXT NOT NULL CHECK (type IN ('INCOME', 'EXPENSE', 'TRANSFER')),
+  "categoryId"   UUID REFERENCES categories(id) ON DELETE SET NULL, -- ✅ NULLABLE (NULL untuk TRANSFER)
   description    TEXT,
   date           TIMESTAMPTZ NOT NULL,
   "accountId"    UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  user_id        UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   "createdAt"    TIMESTAMPTZ NOT NULL DEFAULT now(),
   "updatedAt"    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Indexes untuk performa
+CREATE INDEX idx_transactions_accountId ON transactions("accountId");
+CREATE INDEX idx_transactions_categoryId ON transactions("categoryId");
+CREATE INDEX idx_transactions_date ON transactions(date DESC);
+CREATE INDEX idx_transactions_type ON transactions(type);
 ```
 
 #### `budgets`
@@ -210,6 +252,64 @@ CREATE TABLE financial_goals (
 );
 ```
 
+### **Template Tables**
+
+#### `default_wallet_templates`
+Template wallet yang akan di-copy untuk setiap user baru
+```sql
+CREATE TABLE default_wallet_templates (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          TEXT NOT NULL,
+  balance       NUMERIC DEFAULT 0,
+  order_index   INT DEFAULT 0,
+  "createdAt"   TIMESTAMPTZ DEFAULT now()
+);
+
+-- Default data
+INSERT INTO default_wallet_templates (name, balance, order_index) VALUES
+('Cash', 0, 1),
+('Bank Account', 0, 2),
+('E-Wallet', 0, 3);
+```
+
+#### `default_category_templates`
+Template categories yang akan di-copy untuk setiap user baru
+```sql
+CREATE TABLE default_category_templates (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          TEXT NOT NULL,
+  type          TEXT NOT NULL CHECK (type IN ('INCOME', 'EXPENSE', 'TRANSFER')),
+  color         TEXT DEFAULT '#6B7280',
+  icon          TEXT DEFAULT 'circle',
+  order_index   INT DEFAULT 0,
+  "createdAt"   TIMESTAMPTZ DEFAULT now()
+);
+
+-- Default data
+INSERT INTO default_category_templates (name, type, color, icon, order_index) VALUES
+-- EXPENSE
+('Food & Dining', 'EXPENSE', '#EF4444', 'utensils', 1),
+('Transportation', 'EXPENSE', '#F59E0B', 'car', 2),
+('Shopping', 'EXPENSE', '#EC4899', 'shopping-bag', 3),
+('Entertainment', 'EXPENSE', '#8B5CF6', 'film', 4),
+('Bills & Utilities', 'EXPENSE', '#3B82F6', 'file-text', 5),
+('Health', 'EXPENSE', '#10B981', 'heart', 6),
+('Education', 'EXPENSE', '#06B6D4', 'book', 7),
+('Other Expense', 'EXPENSE', '#6B7280', 'circle', 8),
+
+-- INCOME
+('Salary', 'INCOME', '#22C55E', 'dollar-sign', 9),
+('Business', 'INCOME', '#14B8A6', 'briefcase', 10),
+('Investment', 'INCOME', '#6366F1', 'trending-up', 11),
+('Gift', 'INCOME', '#F97316', 'gift', 12),
+('Other Income', 'INCOME', '#84CC16', 'circle', 13),
+
+-- TRANSFER
+('Transfer', 'TRANSFER', '#64748B', 'arrow-right', 14);
+```
+
+### **Soft Delete Tables**
+
 #### `hidden_accounts`
 Track hidden wallets per user (soft delete for system accounts)
 ```sql
@@ -235,16 +335,26 @@ CREATE TABLE hidden_categories (
 ```
 
 ### **Key Relationships**
-- `transactions.accountId` → `accounts.id` (Many-to-One)
-- `transactions.categoryId` → `categories.id` (Many-to-One)
+- `transactions.accountId` → `accounts.id` (Many-to-One) - Wallet source
+- `transactions.categoryId` → `categories.id` (Many-to-One, NULLABLE) - NULL untuk TRANSFER
 - `budgets.categoryId` → `categories.id` (Many-to-One)
-- All tables with `user_id` → `auth.users.id` (Multi-tenancy)
+- All main tables with `user_id` → `auth.users.id` (Multi-tenancy isolation)
+
+### **Transaction Types Logic**
+
+| Type     | categoryId | Balance Update                              |
+|----------|-----------|---------------------------------------------|
+| INCOME   | Required  | accountId balance += amount                 |
+| EXPENSE  | Required  | accountId balance -= amount (check balance) |
+| TRANSFER | NULL      | accountId -= amount, toAccountId += amount  |
 
 ### **Security (RLS)**
 Row Level Security enabled untuk semua tables:
-- Users hanya bisa akses data mereka sendiri (filtered by user_id)
-- Default data (`is_default = true`) dibuat otomatis untuk setiap user baru
+- Users hanya bisa akses data mereka sendiri (filtered by `user_id`)
+- `transactions` ownership verified via `accounts.user_id`
+- Default data (`is_default = true`) dibuat otomatis saat user signup
 - User dapat menghapus semua data termasuk default data
+- Setiap user bisa punya category/account dengan nama yang sama (isolated per user)
 ## 🔧 Installation & Setup
 
 ### **Prerequisites**

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, Settings } from 'lucide-react'
+import { Trash2, Plus, Settings, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Account {
@@ -32,6 +32,9 @@ export function CategoryAccount(props: CategoryAccountProps) {
         balance: '', // Raw value (for API)
     })
     const [displayBalance, setDisplayBalance] = useState('') // Formatted value (for display)
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [editData, setEditData] = useState({ name: '', balance: '' })
+    const [editDisplayBalance, setEditDisplayBalance] = useState('')
 
 
     const fetchAccounts = async () => {
@@ -121,6 +124,72 @@ export function CategoryAccount(props: CategoryAccountProps) {
         } catch (error) {
             console.error('Failed to create account:', error)
             toast.error('Failed to create account. Please check console for details.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleEditBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const input = e.target.value
+        const rawValue = input.replace(/[^\d]/g, '')
+
+        if (rawValue === '') {
+            setEditData({ ...editData, balance: '' })
+            setEditDisplayBalance('')
+            return
+        }
+
+        setEditData({ ...editData, balance: rawValue })
+        const formatted = Number(rawValue).toLocaleString('id-ID')
+        setEditDisplayBalance(formatted)
+    }
+
+    const startEdit = (account: Account) => {
+        setEditingId(account.id)
+        setEditData({
+            name: account.name,
+            balance: account.balance.toString()
+        })
+        setEditDisplayBalance(account.balance.toLocaleString('id-ID'))
+    }
+
+    const cancelEdit = () => {
+        setEditingId(null)
+        setEditData({ name: '', balance: '' })
+        setEditDisplayBalance('')
+    }
+
+    const handleUpdateAccount = async (accountId: string) => {
+        if (!editData.name.trim()) {
+            toast.error('Account name is required')
+            return
+        }
+
+        setLoading(true)
+        try {
+            const payload = {
+                name: editData.name,
+                balance: Number(editData.balance || 0)
+            }
+
+            const response = await fetch(`/api/accounts/${accountId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+
+            if (response.ok) {
+                toast.success('Wallet updated successfully')
+                cancelEdit()
+                fetchAccounts()
+                props.onAccountAdded?.()
+            } else {
+                const error = await response.json()
+                toast.error(error.error || 'Failed to update wallet')
+            }
+        } catch (error) {
+            console.error('Failed to update account:', error)
+            toast.error('Failed to update wallet')
         } finally {
             setLoading(false)
         }
@@ -224,27 +293,90 @@ export function CategoryAccount(props: CategoryAccountProps) {
                             ) : (
                                 accounts.map(account => (
                                     <div key={account.id} className="flex items-center justify-between p-3 border rounded hover:bg-accent/50 transition-colors">
-                                        <div className="flex items-center space-x-3">
-                                            <span className="font-medium">{account.name}</span>
-                                            <Badge variant="outline" className="text-xs">
-                                                Rp {account.balance.toLocaleString('id-ID')}
-                                            </Badge>
-                                            {account.is_default && (
-                                                <Badge variant="secondary" className="text-xs">
-                                                    Default
-                                                </Badge>
-                                            )}
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDeleteAccount(account.id)}
-                                            className="text-red-600 hover:text-red-700 cursor-pointer"
-                                            aria-label="Delete wallet"
-                                            title="Delete wallet"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {editingId === account.id ? (
+                                            // Edit Mode
+                                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <div>
+                                                    <Label htmlFor={`edit-name-${account.id}`} className="text-xs">Wallet Name</Label>
+                                                    <Input
+                                                        id={`edit-name-${account.id}`}
+                                                        value={editData.name}
+                                                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                                                        placeholder="Wallet name"
+                                                        className="h-8"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor={`edit-balance-${account.id}`} className="text-xs">Balance</Label>
+                                                    <Input
+                                                        id={`edit-balance-${account.id}`}
+                                                        type="text"
+                                                        value={editDisplayBalance}
+                                                        onChange={handleEditBalanceChange}
+                                                        placeholder="0"
+                                                        className="h-8"
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-2 flex gap-2 justify-end">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={cancelEdit}
+                                                        disabled={loading}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <X className="h-4 w-4 mr-1" />
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleUpdateAccount(account.id)}
+                                                        disabled={loading}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Check className="h-4 w-4 mr-1" />
+                                                        {loading ? 'Saving...' : 'Save'}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            // View Mode
+                                            <>
+                                                <div className="flex items-center space-x-3">
+                                                    <span className="font-medium">{account.name}</span>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        Rp {account.balance.toLocaleString('id-ID')}
+                                                    </Badge>
+                                                    {account.is_default && (
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            Default
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => startEdit(account)}
+                                                        className="text-blue-600 hover:text-blue-700 cursor-pointer"
+                                                        aria-label="Edit wallet"
+                                                        title="Edit wallet"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteAccount(account.id)}
+                                                        className="text-red-600 hover:text-red-700 cursor-pointer"
+                                                        aria-label="Delete wallet"
+                                                        title="Delete wallet"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 ))
                             )}

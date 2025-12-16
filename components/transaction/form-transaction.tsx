@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useCallback } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,6 +39,8 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
   // Amount formatting state
   const [amount, setAmount] = useState<string>("")
   const [displayAmount, setDisplayAmount] = useState<string>("")
+  const [description, setDescription] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -83,7 +86,16 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
 
   const handleTransactionTypeChange = (newType: string) => {
     setTransactionType(newType)
-    setSelectedCategory("")
+
+    if (newType === 'transfer') {
+      // Auto-select Transfer category
+      const transferCategory = categories.find(cat => cat.type?.toLowerCase() === 'transfer')
+      if (transferCategory) {
+        setSelectedCategory(transferCategory.id)
+      }
+    } else {
+      setSelectedCategory("")
+    }
   }
 
   // Format amount dengan thousand separator
@@ -107,12 +119,86 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
     setDisplayAmount(formatted)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would handle the form submission, like saving to a database
-    // For now, we'll just call onComplete to close the form
 
-    onComplete()
+    // Validation
+    if (!amount || Number(amount) <= 0) {
+      toast.error('Please enter a valid amount')
+      return
+    }
+
+    if (!selectedAccount) {
+      toast.error('Please select a wallet')
+      return
+    }
+
+    if (transactionType !== 'transfer' && !selectedCategory) {
+      toast.error('Please select a category')
+      return
+    }
+
+    if (transactionType === 'transfer' && !selectedToAccount) {
+      toast.error('Please select destination wallet')
+      return
+    }
+
+    if (transactionType === 'transfer' && selectedAccount === selectedToAccount) {
+      toast.error('Source and destination wallets must be different')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const payload: any = {
+        type: transactionType.toUpperCase(),
+        amount: Number(amount),
+        accountId: selectedAccount,
+        date: date.toISOString(),
+        description: description.trim() || null
+      }
+
+      if (transactionType !== 'transfer') {
+        payload.categoryId = selectedCategory
+      }
+
+      if (transactionType === 'transfer') {
+        payload.toAccountId = selectedToAccount
+      }
+
+      const response = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (response.ok) {
+        toast.success('Transaction created successfully')
+
+        // Reset form
+        setAmount('')
+        setDisplayAmount('')
+        setDescription('')
+        setSelectedCategory('')
+        setSelectedAccount('')
+        setSelectedToAccount('')
+        setDate(new Date())
+
+        // Refresh accounts to show updated balances
+        fetchAccounts()
+
+        onComplete()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to create transaction')
+      }
+    } catch (error) {
+      console.error('Create transaction error:', error)
+      toast.error('Failed to create transaction')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -179,17 +265,20 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          {/* Modal Category - Pass transaction type untuk filter */}
-          <CategoryModal
-            onCategoryAdded={handleCategoryAdded}
-            transactionType={transactionType}
-          />
+          {/* Modal Category - Pass transaction type untuk filter, disabled untuk transfer */}
+          {transactionType !== 'transfer' && (
+            <CategoryModal
+              onCategoryAdded={handleCategoryAdded}
+              transactionType={transactionType}
+            />
+          )}
           <Select
             value={selectedCategory}
             onValueChange={setSelectedCategory}
+            disabled={transactionType === 'transfer'}
           >
             <SelectTrigger className="w-full" id="category">
-              <SelectValue placeholder={`Select ${transactionType.toUpperCase()} `} />
+              <SelectValue placeholder={transactionType === 'transfer' ? 'Transfer' : `Select ${transactionType.toUpperCase()}`} />
             </SelectTrigger>
             <SelectContent>
               {transactionType === "expense" ? (
@@ -234,7 +323,12 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <Textarea id="description" placeholder="Enter transaction details..." />
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Enter transaction details..."
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -287,10 +381,21 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
       </div>
 
       <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onComplete}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onComplete}
+          disabled={isSubmitting}
+        >
           Cancel
         </Button>
-        <Button type="submit">Save Transaction</Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="cursor-pointer"
+        >
+          {isSubmitting ? 'Saving...' : 'Save Transaction'}
+        </Button>
       </div>
     </form>
   )
