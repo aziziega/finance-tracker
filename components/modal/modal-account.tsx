@@ -4,8 +4,17 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Plus, Settings, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -35,6 +44,8 @@ export function CategoryAccount(props: CategoryAccountProps) {
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editData, setEditData] = useState({ name: '', balance: '' })
     const [editDisplayBalance, setEditDisplayBalance] = useState('')
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [accountToDelete, setAccountToDelete] = useState<Account | null>(null)
 
 
     const fetchAccounts = async () => {
@@ -195,17 +206,16 @@ export function CategoryAccount(props: CategoryAccountProps) {
         }
     }
 
-    const handleDeleteAccount = async (accountId: string) => {
-        const account = accounts.find(a => a.id === accountId)
+    const handleDeleteClick = (account: Account) => {
+        setAccountToDelete(account)
+        setDeleteDialogOpen(true)
+    }
 
-        const confirmMessage = account?.is_default
-            ? 'Delete this default wallet? This cannot be undone.'
-            : 'Are you sure you want to delete this wallet?'
-
-        if (!confirm(confirmMessage)) return
+    const handleDeleteAccount = async () => {
+        if (!accountToDelete) return
 
         try {
-            const response = await fetch(`/api/accounts/${accountId}`, {
+            const response = await fetch(`/api/accounts/${accountToDelete.id}`, {
                 method: 'DELETE'
             })
 
@@ -213,6 +223,8 @@ export function CategoryAccount(props: CategoryAccountProps) {
                 toast.success('Wallet deleted successfully')
                 fetchAccounts()
                 props.onAccountAdded?.()
+                setDeleteDialogOpen(false)
+                setAccountToDelete(null)
             } else {
                 const error = await response.json()
                 toast.error(error.error || 'Failed to delete wallet')
@@ -367,7 +379,7 @@ export function CategoryAccount(props: CategoryAccountProps) {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handleDeleteAccount(account.id)}
+                                                        onClick={() => handleDeleteClick(account)}
                                                         className="text-red-600 hover:text-red-700 cursor-pointer"
                                                         aria-label="Delete wallet"
                                                         title="Delete wallet"
@@ -384,6 +396,37 @@ export function CategoryAccount(props: CategoryAccountProps) {
                     </div>
                 </div>
             </DialogContent>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Wallet?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {accountToDelete?.is_default ? (
+                                <span>
+                                    You are about to delete the <strong>{accountToDelete?.name}</strong> default wallet with balance of <strong>Rp {accountToDelete?.balance.toLocaleString('id-ID')}</strong>.
+                                    This action cannot be undone and will affect your transactions.
+                                </span>
+                            ) : (
+                                <span>
+                                    Are you sure you want to delete <strong>{accountToDelete?.name}</strong> with balance of <strong>Rp {accountToDelete?.balance.toLocaleString('id-ID')}</strong>?
+                                    This action cannot be undone.
+                                </span>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteAccount}
+                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     )
 }

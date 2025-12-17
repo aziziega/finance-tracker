@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormTransaction } from "@/components/transaction/form-transaction";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Overview } from "@/components/overview/overview";
 import { RecentTransactions } from "@/components/transaction/recent-transactions";
@@ -14,9 +15,60 @@ import { FinancialGoals } from "@/components/goal/financial-goals";
 
 
 export default function DashboardPreview() {
-
-
     const [showTransaction, setShowTransaction] = useState(false)
+    const { stats, loading, error, refetch } = useDashboardStats()
+
+    const handleTransactionComplete = () => {
+        setShowTransaction(false)
+        refetch() // Refresh dashboard stats
+    }
+
+    // Loading skeleton
+    if (loading) {
+        return (
+            <div className="flex min-h-screen w-full flex-col">
+                <main className="flex flex-1 flex-col gap-4 md:gap-8 sm:gap-6 md:p-8 sm:p-6 p-4 mt-20">
+                    <div className="flex items-center justify-between">
+                        <div className="h-8 bg-muted rounded w-48 animate-pulse" />
+                        <div className="h-10 bg-muted rounded w-40 animate-pulse" />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        {[1, 2, 3, 4].map((i) => (
+                            <Card key={i} className="animate-pulse">
+                                <CardHeader className="pb-2">
+                                    <div className="h-4 bg-muted rounded w-1/2" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-8 bg-muted rounded w-3/4 mb-2" />
+                                    <div className="h-3 bg-muted rounded w-1/2" />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </main>
+            </div>
+        )
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="flex min-h-screen w-full flex-col">
+                <main className="flex flex-1 flex-col gap-4 md:gap-8 sm:gap-6 md:p-8 sm:p-6 p-4 mt-20">
+                    <Card className="border-red-500">
+                        <CardHeader>
+                            <CardTitle className="text-red-500">Error Loading Dashboard</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">{error}</p>
+                            <Button onClick={refetch} className="mt-4">Retry</Button>
+                        </CardContent>
+                    </Card>
+                </main>
+            </div>
+        )
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col ">
             <main className="flex flex-1 flex-col gap-4 md:gap-8 sm:gap-6 md:p-8 sm:p-6 p-4 mt-20">
@@ -41,7 +93,7 @@ export default function DashboardPreview() {
                             <CardDescription>Record a new expense or income</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <FormTransaction onComplete={() => setShowTransaction(false)} />
+                            <FormTransaction onComplete={handleTransactionComplete} />
                         </CardContent>
                     </Card>)}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -50,8 +102,12 @@ export default function DashboardPreview() {
                             <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">$12,580.00</div>
-                            <p className="text-xs text-muted-foreground">+$1,245.00 from last month</p>
+                            <div className="text-2xl font-bold">
+                                Rp {stats?.totalBalance.toLocaleString('id-ID')}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                All wallet combined
+                            </p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -59,8 +115,13 @@ export default function DashboardPreview() {
                             <CardTitle className="text-sm font-medium">Monthly Income</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">$4,395.00</div>
-                            <p className="text-xs text-muted-foreground">+2.5% from last month</p>
+                            <div className="text-2xl font-bold">
+                                Rp {stats?.monthlyIncome.toLocaleString('id-ID')}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {stats && stats.incomeChange >= 0 ? '+' : ''}
+                                {stats?.incomeChange.toFixed(1)}% from last month
+                            </p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -68,8 +129,13 @@ export default function DashboardPreview() {
                             <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">$2,860.00</div>
-                            <p className="text-xs text-muted-foreground">+18.1% from last month</p>
+                            <div className="text-2xl font-bold">
+                                Rp {stats?.monthlyExpense.toLocaleString('id-ID')}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {stats && stats.expenseChange >= 0 ? '+' : ''}
+                                {stats?.expenseChange.toFixed(1)}% from last month
+                            </p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -77,8 +143,12 @@ export default function DashboardPreview() {
                             <CardTitle className="text-sm font-medium">Savings Rate</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">34.9%</div>
-                            <p className="text-xs text-muted-foreground">-4% from last month</p>
+                            <div className="text-2xl font-bold">
+                                {stats?.savingsRate.toFixed(1)}%
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Of your income
+                            </p>
                         </CardContent>
                     </Card>
 

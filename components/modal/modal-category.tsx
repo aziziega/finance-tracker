@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Plus, Settings } from 'lucide-react'
 import { toast } from 'sonner'
@@ -39,6 +40,8 @@ export function CategoryModal(props: CategoryModalProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
 
     // Default type berdasarkan transactionType yang aktif
     const getDefaultType = () => {
@@ -135,17 +138,16 @@ export function CategoryModal(props: CategoryModalProps) {
         }
     }
 
-    const handleDeleteCategory = async (categoryId: string) => {
-        const category = categories.find(c => c.id === categoryId)
+    const handleDeleteClick = (category: Category) => {
+        setCategoryToDelete(category)
+        setDeleteDialogOpen(true)
+    }
 
-        const confirmMessage = category?.is_default
-            ? 'Delete this default category? This cannot be undone.'
-            : 'Are you sure you want to delete this category?'
-
-        if (!confirm(confirmMessage)) return
+    const handleDeleteCategory = async () => {
+        if (!categoryToDelete) return
 
         try {
-            const response = await fetch(`/api/categories/${categoryId}`, {
+            const response = await fetch(`/api/categories/${categoryToDelete.id}`, {
                 method: 'DELETE'
             })
 
@@ -153,6 +155,8 @@ export function CategoryModal(props: CategoryModalProps) {
                 toast.success('Category deleted successfully')
                 fetchCategories()
                 props.onCategoryAdded?.()
+                setDeleteDialogOpen(false)
+                setCategoryToDelete(null)
             } else {
                 const error = await response.json()
                 toast.error(error.error || 'Failed to delete category')
@@ -265,7 +269,7 @@ export function CategoryModal(props: CategoryModalProps) {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => handleDeleteCategory(category.id)}
+                                                    onClick={() => handleDeleteClick(category)}
                                                     className="text-red-600 hover:text-red-700 cursor-pointer"
                                                     aria-label="Delete category"
                                                     title="Delete category"
@@ -281,6 +285,37 @@ export function CategoryModal(props: CategoryModalProps) {
                     </div>
                 </div>
             </DialogContent>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Category?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {categoryToDelete?.is_default ? (
+                                <span>
+                                    You are about to delete the <strong>{categoryToDelete?.name}</strong> default category.
+                                    This action cannot be undone and may affect existing transactions.
+                                </span>
+                            ) : (
+                                <span>
+                                    Are you sure you want to delete <strong>{categoryToDelete?.name}</strong>?
+                                    This action cannot be undone.
+                                </span>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteCategory}
+                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     )
 }
