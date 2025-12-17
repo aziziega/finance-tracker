@@ -20,26 +20,27 @@ import { CategoryAccount } from "@/components/modal/modal-account"
 
 interface AddTransactionFormProps {
   onComplete: () => void
+  editTransaction?: any
 }
 
 
-export function FormTransaction({ onComplete }: AddTransactionFormProps) {
-  const [date, setDate] = useState<Date>(new Date())
-  const [transactionType, setTransactionType] = useState<string>("expense")
+export function FormTransaction({ onComplete, editTransaction }: AddTransactionFormProps) {
+  const [date, setDate] = useState<Date>(editTransaction ? new Date(editTransaction.date) : new Date())
+  const [transactionType, setTransactionType] = useState<string>(editTransaction ? editTransaction.type.toLowerCase() : "expense")
   const [categories, setCategories] = useState<any[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string>("")
+  const [selectedCategory, setSelectedCategory] = useState<string>(editTransaction?.categoryId || "")
   const [refreshKey, setRefreshKey] = useState(0)
 
   // STEP 3: Account/Wallet state management
   const [accounts, setAccounts] = useState<any[]>([])
-  const [selectedAccount, setSelectedAccount] = useState<string>("")
-  const [selectedToAccount, setSelectedToAccount] = useState<string>("")
+  const [selectedAccount, setSelectedAccount] = useState<string>(editTransaction?.accountId || "")
+  const [selectedToAccount, setSelectedToAccount] = useState<string>(editTransaction?.toAccountId || "")
   const [refreshAccountKey, setRefreshAccountKey] = useState(0)
 
   // Amount formatting state
-  const [amount, setAmount] = useState<string>("")
-  const [displayAmount, setDisplayAmount] = useState<string>("")
-  const [description, setDescription] = useState<string>("")
+  const [amount, setAmount] = useState<string>(editTransaction ? String(editTransaction.amount) : "")
+  const [displayAmount, setDisplayAmount] = useState<string>(editTransaction ? Number(editTransaction.amount).toLocaleString('id-ID') : "")
+  const [description, setDescription] = useState<string>(editTransaction?.description || "")
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   const fetchCategories = useCallback(async () => {
@@ -167,14 +168,19 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
         payload.toAccountId = selectedToAccount
       }
 
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
+      const url = editTransaction
+        ? `/api/transactions/${editTransaction.id}`
+        : '/api/transactions'
+      const method = editTransaction ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
 
       if (response.ok) {
-        toast.success('Transaction created successfully')
+        toast.success(editTransaction ? 'Transaction updated successfully' : 'Transaction created successfully')
 
         // Reset form
         setAmount('')
@@ -394,7 +400,7 @@ export function FormTransaction({ onComplete }: AddTransactionFormProps) {
           disabled={isSubmitting}
           className="cursor-pointer"
         >
-          {isSubmitting ? 'Saving...' : 'Save Transaction'}
+          {isSubmitting ? 'Saving...' : (editTransaction ? 'Update Transaction' : 'Save Transaction')}
         </Button>
       </div>
     </form>

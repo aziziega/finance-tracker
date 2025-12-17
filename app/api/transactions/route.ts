@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { error } from 'console'
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,11 +32,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('transactions')
-      .select(`
-        *,
-        categories:categoryId (id, name, type, color, icon),
-        accounts:accountId (id, name, balance)
-      `)
+      .select(`*`)
       .in('accountId', accountIds)
       .order('date', { ascending: false })
       .limit(Number(limit))
@@ -84,10 +81,25 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    if (type !== 'TRANSFER' && !categoryId) {
-      return NextResponse.json({ 
-        error: 'Category is required for non-transfer transactions' 
-      }, { status: 400 })
+    let finalCategoryId = categoryId
+
+    if (type === 'TRANSFER') {
+      // ✅ Auto-fetch Transfer category dari database
+      const { data: transferCategory } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('type', 'TRANSFER')
+        .eq('user_id', user.id)
+        .single()
+      
+      finalCategoryId = transferCategory?.id
+    } else {
+      // INCOME/EXPENSE tetap require categoryId
+      if (!categoryId) {
+        return NextResponse.json({ 
+          error: 'Category is required for non-transfer transactions' 
+        }, { status: 400 })
+      }
     }
 
     if (type === 'TRANSFER' && !toAccountId) {
@@ -152,11 +164,12 @@ export async function POST(request: NextRequest) {
       amount: transactionAmount,
       accountId,
       date,
-      description: description || null
+      description: description || null,
+      toAccountId: type === 'TRANSFER' ? toAccountId : null
     }
 
-    if (categoryId) {
-      transactionData.categoryId = categoryId
+    if (finalCategoryId) {
+      transactionData.categoryId = finalCategoryId
     }
 
     const { data: transaction, error: transactionError } = await supabase

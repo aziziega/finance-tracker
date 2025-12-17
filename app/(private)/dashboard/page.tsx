@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,11 +16,28 @@ import { FinancialGoals } from "@/components/goal/financial-goals";
 
 export default function DashboardPreview() {
     const [showTransaction, setShowTransaction] = useState(false)
+    const [editingTransaction, setEditingTransaction] = useState<any>(null)
     const { stats, loading, error, refetch } = useDashboardStats()
+    const formRef = useRef<HTMLDivElement>(null)
+    const dashboardTitleRef = useRef<HTMLHeadingElement>(null)
 
     const handleTransactionComplete = () => {
         setShowTransaction(false)
+        setEditingTransaction(null)
         refetch() // Refresh dashboard stats
+    }
+
+    const handleEditTransaction = (transaction: any) => {
+        setEditingTransaction(transaction)
+        setShowTransaction(true)
+        // Scroll to dashboard title after state updates
+        setTimeout(() => {
+            dashboardTitleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
+    }
+
+    const handleTransactionDeleted = () => {
+        refetch() // Refresh dashboard stats after deletion
     }
 
     // Loading skeleton
@@ -73,8 +90,11 @@ export default function DashboardPreview() {
         <div className="flex min-h-screen w-full flex-col ">
             <main className="flex flex-1 flex-col gap-4 md:gap-8 sm:gap-6 md:p-8 sm:p-6 p-4 mt-20">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold tracking-tight">Finance Dashboard</h1>
-                    <Button className="cursor-pointer" onClick={() => setShowTransaction(!showTransaction)}>
+                    <h1 ref={dashboardTitleRef} className="text-2xl font-bold tracking-tight">Finance Dashboard</h1>
+                    <Button className="cursor-pointer" onClick={() => {
+                        setEditingTransaction(null)
+                        setShowTransaction(!showTransaction)
+                    }}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Transaction
                     </Button>
@@ -87,13 +107,18 @@ export default function DashboardPreview() {
                     </Button> */}
                 </div>
                 {showTransaction && (
-                    <Card className="mb-4">
+                    <Card ref={formRef} className="mb-4">
                         <CardHeader>
-                            <CardTitle>Add New Transaction</CardTitle>
-                            <CardDescription>Record a new expense or income</CardDescription>
+                            <CardTitle>{editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}</CardTitle>
+                            <CardDescription>
+                                {editingTransaction ? 'Update transaction details' : 'Record a new expense or income'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <FormTransaction onComplete={handleTransactionComplete} />
+                            <FormTransaction
+                                onComplete={handleTransactionComplete}
+                                editTransaction={editingTransaction}
+                            />
                         </CardContent>
                     </Card>)}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -177,7 +202,10 @@ export default function DashboardPreview() {
                                     <CardDescription>You made 12 transactions this month.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <RecentTransactions />
+                                    <RecentTransactions
+                                        onEditTransaction={handleEditTransaction}
+                                        onTransactionDeleted={handleTransactionDeleted}
+                                    />
                                 </CardContent>
                             </Card>
                         </div>
