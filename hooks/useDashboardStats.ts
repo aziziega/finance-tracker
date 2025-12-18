@@ -9,6 +9,7 @@ interface DashboardStats {
   lastMonthExpense: number
   incomeChange: number
   expenseChange: number
+  transactionCount: number
 }
 
 export function useDashboardStats() {

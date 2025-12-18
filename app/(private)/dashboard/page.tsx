@@ -199,7 +199,7 @@ export default function DashboardPreview() {
                             <Card className="lg:col-span-3">
                                 <CardHeader>
                                     <CardTitle>Recent Transactions</CardTitle>
-                                    <CardDescription>You made 12 transactions this month.</CardDescription>
+                                    <CardDescription>You made {stats?.transactionCount || 0} transaction{stats?.transactionCount !== 1 ? 's' : ''} this month.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <RecentTransactions

@@ -264,7 +264,10 @@ export function FormTransaction({ onComplete, editTransaction }: AddTransactionF
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={date} onSelect={(date) => date && setDate(date)} initialFocus />
+              <Calendar mode="single" selected={date} onSelect={(date) => date && setDate(date)} captionLayout="dropdown"
+                fromYear={new Date().getFullYear() - 5}
+                toYear={new Date().getFullYear() + 1}
+                initialFocus />
             </PopoverContent>
           </Popover>
         </div>

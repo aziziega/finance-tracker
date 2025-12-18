@@ -52,6 +52,8 @@ export async function GET() {
       .gte('date', firstDay.toISOString())
       .lte('date', lastDay.toISOString())
 
+      const transactionCount = transactions?.length || 0
+
     const monthlyIncome = transactions
       ?.filter(t => t.type === 'INCOME')
       .reduce((sum, t) => sum + Number(t.amount), 0) || 0
@@ -101,7 +103,8 @@ export async function GET() {
       lastMonthIncome,
       lastMonthExpense,
       incomeChange,
-      expenseChange
+      expenseChange, 
+      transactionCount
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)
