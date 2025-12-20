@@ -38,13 +38,53 @@ export async function GET(request: NextRequest) {
         if (customStart && customEnd) {
           startDate = new Date(customStart)
           const endDate = new Date(customEnd)
-          monthsToShow = differenceInMonths(endDate, startDate) + 1
+          
+          // Get user's account IDs
+          const { data: userAccounts } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('user_id', user.id)
+
+          const accountIds = (userAccounts || []).map(acc => acc.id)
+
+          if (accountIds.length === 0) {
+            return NextResponse.json({ chartData: [] })
+          }
+
+          // Get transactions in custom range
+          const { data: customTransactions } = await supabase
+            .from('transactions')
+            .select('amount, type')
+            .in('accountId', accountIds)
+            .gte('date', startDate.toISOString())
+            .lte('date', endDate.toISOString())
+
+          // Aggregate total for the entire period
+          let totalIncome = 0
+          let totalExpense = 0
+
+          customTransactions?.forEach(transaction => {
+            if (transaction.type === 'INCOME') {
+              totalIncome += Number(transaction.amount)
+            } else if (transaction.type === 'EXPENSE') {
+              totalExpense += Number(transaction.amount)
+            }
+          })
+
+          // Return single aggregated data point
+          const customChartData = [{
+            name: `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`,
+            Income: totalIncome,
+            Expenses: totalExpense,
+            Savings: totalIncome - totalExpense
+          }]
+
+          return NextResponse.json({ chartData: customChartData })
         } else {
           return NextResponse.json({ 
             error: 'Custom range requires startDate and endDate' 
           }, { status: 400 })
         }
-        break
       default:
         startDate = subMonths(new Date(), 6)
         monthsToShow = 6

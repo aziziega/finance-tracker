@@ -30,16 +30,30 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const offset = searchParams.get('offset') || '0'
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
     let query = supabase
       .from('transactions')
-      .select(`*`)
+      .select(`
+        *,
+        categories:categoryId (id, name, type, color, icon),
+        accounts:accountId (id, name, balance)
+      `)
       .in('accountId', accountIds)
       .order('date', { ascending: false })
-      .limit(Number(limit))
+
+    // Add date range filter
+    if (startDate && endDate) {
+      query = query.gte('date', startDate).lte('date', endDate)
+    }
 
     if (accountId) {
       query = query.eq('accountId', accountId)
     }
+
+    query = query.range(Number(offset), Number(offset) + Number(limit) - 1)
 
     const { data: transactions, error } = await query
 

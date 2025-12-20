@@ -3,6 +3,7 @@
 import useAuth from '@/hooks/useAuth'
 import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation';
+import Snowfall from 'react-snowfall';
 
 const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, loading } = useAuth() || {};
@@ -28,7 +29,8 @@ const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
 
 
     return (
-        <div>
+        <div className="relative">
+            <Snowfall color="white" />
             {children}
         </div>
     )
