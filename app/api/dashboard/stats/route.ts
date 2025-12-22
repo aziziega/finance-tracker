@@ -47,7 +47,7 @@ export async function GET() {
     // 3. Get current month transactions
     const { data: transactions } = await supabase
       .from('transactions')
-      .select('amount, type')
+      .select('amount, type, is_initial_balance')
       .in('accountId', accountIds)
       .gte('date', firstDay.toISOString())
       .lte('date', lastDay.toISOString())
@@ -55,7 +55,7 @@ export async function GET() {
       const transactionCount = transactions?.length || 0
 
     const monthlyIncome = transactions
-      ?.filter(t => t.type === 'INCOME')
+      ?.filter(t => t.type === 'INCOME' && !t.is_initial_balance)
       .reduce((sum, t) => sum + Number(t.amount), 0) || 0
 
     const monthlyExpense = transactions
@@ -68,13 +68,13 @@ export async function GET() {
 
     const { data: lastMonthTransactions } = await supabase
       .from('transactions')
-      .select('amount, type')
+      .select('amount, type, is_initial_balance')
       .in('accountId', accountIds)
       .gte('date', lastMonthFirstDay.toISOString())
       .lte('date', lastMonthLastDay.toISOString())
 
     const lastMonthIncome = lastMonthTransactions
-      ?.filter(t => t.type === 'INCOME')
+      ?.filter(t => t.type === 'INCOME' && !t.is_initial_balance)
       .reduce((sum, t) => sum + Number(t.amount), 0) || 0
 
     const lastMonthExpense = lastMonthTransactions

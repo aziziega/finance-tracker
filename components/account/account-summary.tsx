@@ -28,7 +28,11 @@ function getAccountIcon(name: string) {
   return Wallet // Default icon
 }
 
-export function AccountSummary() {
+interface AccountSummaryProps {
+  onBalanceChanged?: () => void
+}
+
+export function AccountSummary({ onBalanceChanged }: AccountSummaryProps) {
 
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,6 +64,7 @@ export function AccountSummary() {
 
   const handleAccountUpdate = () => {
     fetchAccounts()
+    onBalanceChanged?.() // Trigger dashboard stats refetch
   }
 
   // Loading state

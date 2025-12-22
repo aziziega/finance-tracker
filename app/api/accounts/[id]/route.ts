@@ -34,17 +34,28 @@ export async function DELETE(
       }, { status: 403 })
     }
 
-    // Check if account is being used in transactions
+    // Check if account has transactions (excluding initial balance)
     const { data: transactions } = await supabase
       .from('transactions')
-      .select('id')
+      .select('id, is_initial_balance')
       .eq('accountId', accountId)
-      .limit(1)
 
-    if (transactions && transactions.length > 0) {
+    // Filter only real transactions (not initial balance)
+    const realTransactions = transactions?.filter(t => !t.is_initial_balance) || []
+
+    if (realTransactions.length > 0) {
       return NextResponse.json({ 
-        error: 'Cannot delete account that is being used in transactions' 
+        error: 'Cannot delete account that has transaction history. Please delete all transactions first.' 
       }, { status: 400 })
+    }
+
+    // Delete initial balance transactions first (if any)
+    if (transactions && transactions.length > 0) {
+      await supabase
+        .from('transactions')
+        .delete()
+        .eq('accountId', accountId)
+        .eq('is_initial_balance', true)
     }
 
     // Hard delete the account

@@ -7,6 +7,7 @@ interface Transaction {
   type: string
   description: string
   date: string
+  is_initial_balance?: boolean
   categories: {
     name: string
     color: string
@@ -49,9 +50,9 @@ export function useDailyTransactions() {
       const data = await response.json()
       const transactions = data.transactions || []
 
-      // Calculate daily summary
+      // Calculate daily summary - exclude initial balance from totals only
       const dailyIncome = transactions
-        .filter((t: Transaction) => t.type === 'INCOME')
+        .filter((t: Transaction) => t.type === 'INCOME' && !t.is_initial_balance)
         .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0)
       
       const dailyExpense = transactions

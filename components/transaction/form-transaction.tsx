@@ -82,7 +82,11 @@ export function FormTransaction({ onComplete, editTransaction }: AddTransactionF
 
   // STEP 3: Handler untuk account updates (pattern sama dengan category)
   const handleAccountAdded = () => {
-    setRefreshAccountKey(prev => prev + 1)
+    // Add delay to ensure account is created before refetch
+    setTimeout(() => {
+      setRefreshAccountKey(prev => prev + 1)
+      fetchAccounts()
+    }, 150)
   }
 
   const handleTransactionTypeChange = (newType: string) => {

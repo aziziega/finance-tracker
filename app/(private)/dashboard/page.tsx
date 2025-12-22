@@ -211,7 +211,7 @@ export default function DashboardPreview() {
                         </div>
                     </TabsContent>
                     <TabsContent value="accounts" className="space-y-4">
-                        <AccountSummary />
+                        <AccountSummary onBalanceChanged={refetch} />
                     </TabsContent>
                     <TabsContent value="loans" className="space-y-4">
                         <LoansOverview />

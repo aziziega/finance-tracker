@@ -194,10 +194,18 @@ export function RecentTransactions({ onEditTransaction, onTransactionDeleted }: 
 
                                     <div className="ml-3 flex-1">
                                         <p className="text-sm font-medium">
+                                            {transaction.is_initial_balance && (
+                                                <Badge variant="secondary" className="mr-2 text-xs">
+                                                    Initial Setup
+                                                </Badge>
+                                            )}
                                             {transaction.description || transaction.categories?.name || 'Transaction'}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             {transaction.accounts.name}
+                                            {transaction.is_initial_balance && (
+                                                <span className="ml-1">• Wallet Created</span>
+                                            )}
                                             {isTransfer && transaction.toAccountId && ' → Transfer'}
                                         </p>
                                     </div>

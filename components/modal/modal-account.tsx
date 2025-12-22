@@ -119,8 +119,12 @@ export function CategoryAccount(props: CategoryAccountProps) {
                 setNewAccount({ name: '', balance: '' })
                 setDisplayBalance('')
                 setShowAddForm(false)
-                fetchAccounts()
-                props.onAccountAdded?.()
+
+                // Await fetch first, then trigger parent callback with delay
+                await fetchAccounts()
+                setTimeout(() => {
+                    props.onAccountAdded?.()
+                }, 100)
             } else {
                 const error = await response.json()
                 const errorMessage = error.error || 'Failed to create account'

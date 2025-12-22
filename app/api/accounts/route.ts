@@ -72,6 +72,50 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // Create initial balance transaction if balance > 0
+    if (balance && balance > 0) {
+      // Get or create "Initial Balance" category
+      let { data: initialCategory } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', 'Initial Balance')
+        .eq('user_id', user.id)
+        .single()
+
+      // If not exists, create it
+      if (!initialCategory) {
+        const { data: newCategory } = await supabase
+          .from('categories')
+          .insert([{
+            name: 'Initial Balance',
+            type: 'INCOME',
+            icon: 'wallet',
+            color: '#10b981',
+            user_id: user.id,
+            is_default: false
+          }])
+          .select()
+          .single()
+        
+        initialCategory = newCategory
+      }
+
+      // Create initial balance transaction
+      if (initialCategory) {
+        await supabase
+          .from('transactions')
+          .insert([{
+            type: 'INCOME',
+            amount: balance,
+            accountId: account.id,
+            categoryId: initialCategory.id,
+            description: `Initial balance for ${name}`,
+            date: new Date().toISOString(),
+            is_initial_balance: true
+          }])
+      }
+    }
+
     return NextResponse.json({ account })
   } catch (error: any) {
     console.error('Failed to create account:', error)
