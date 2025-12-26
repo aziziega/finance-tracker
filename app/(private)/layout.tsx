@@ -4,10 +4,12 @@ import useAuth from '@/hooks/useAuth'
 import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 import Snowfall from 'react-snowfall';
+import { useSnowfall } from '@/contexts/SnowfallContext';
 
 const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, loading } = useAuth() || {};
     const router = useRouter();
+    const { isSnowfallEnabled } = useSnowfall();
 
     useEffect(() => {
         if (!loading && !user) {
@@ -30,7 +32,7 @@ const PrivatePagesLayout = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <div className="relative">
-            <Snowfall color="white" />
+            {isSnowfallEnabled && <Snowfall color="white" snowflakeCount={200} />}
             {children}
         </div>
     )

@@ -193,7 +193,7 @@ export default function DashboardPreview() {
                                     <CardTitle>Financial Overview</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pl-2">
-                                    <Overview />
+                                    <Overview onEditTransaction={handleEditTransaction} />
                                 </CardContent>
                             </Card>
                             <Card className="lg:col-span-3">

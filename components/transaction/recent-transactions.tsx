@@ -18,9 +18,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { useDailyTransactions } from "@/hooks/useGroupedTransactions"
 import { getCategoryIcon } from "@/lib/category-icons"
-import { Trash2, Loader2, ChevronLeft, ChevronRight, ArrowRight, CalendarIcon } from "lucide-react"
+import { Trash2, Loader2, ChevronLeft, ChevronRight, ArrowRight, CalendarIcon, FileDown } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { ExportRangeModal } from "../modal/export-range-modal"
 
 interface RecentTransactionsProps {
     onEditTransaction?: (transaction: any) => void
@@ -32,6 +33,7 @@ export function RecentTransactions({ onEditTransaction, onTransactionDeleted }: 
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
     const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+    const [exportModalOpen, setExportModalOpen] = useState(false)
 
     const handleDelete = async () => {
         if (!deleteId) return
@@ -136,6 +138,19 @@ export function RecentTransactions({ onEditTransaction, onTransactionDeleted }: 
                         className="text-primary-foreground hover:bg-primary-foreground/20 disabled:opacity-30"
                     >
                         <ChevronRight className="h-5 w-5" />
+                    </Button>
+                </div>
+
+                {/* Export Button */}
+                <div className="flex justify-end">
+                    <Button
+                        onClick={() => setExportModalOpen(true)}
+                        variant="outline"
+                        size="sm"
+                        className="cursor-pointer"
+                    >
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Export Transactions
                     </Button>
                 </div>
 
@@ -265,6 +280,11 @@ export function RecentTransactions({ onEditTransaction, onTransactionDeleted }: 
                 </AlertDialog>
             </div>
 
+            {/* Export Range Modal */}
+            <ExportRangeModal
+                open={exportModalOpen}
+                onOpenChange={setExportModalOpen}
+            />
         </>
     )
 }

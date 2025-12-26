@@ -5,6 +5,7 @@ import React from "react";
 import { AuthProvider } from "@/components/context/AuthProvider";
 import { Toaster } from "sonner";
 import type { Metadata } from 'next'
+import { SnowfallProvider } from "@/contexts/SnowfallContext";
 
 
 export const metadata: Metadata = {
@@ -28,10 +29,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <HeroHeader />
-            {children}
-          </AuthProvider>
+          <SnowfallProvider>
+            <AuthProvider>
+              <HeroHeader />
+              {children}
+            </AuthProvider>
+          </SnowfallProvider>
           <Toaster position="top-right" />
         </ThemeProvider>
       </body>

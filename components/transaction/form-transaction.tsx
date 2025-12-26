@@ -216,7 +216,7 @@ export function FormTransaction({ onComplete, editTransaction }: AddTransactionF
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="transaction-type">Transaction Type</Label>
-          <RadioGroup id="transaction-type" defaultValue="expense" className="flex" onValueChange={handleTransactionTypeChange}>
+          <RadioGroup id="transaction-type" value={transactionType} className="flex" onValueChange={handleTransactionTypeChange}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="expense" id="expense" className="cursor-pointer" />
               <Label htmlFor="expense" className="cursor-pointer">

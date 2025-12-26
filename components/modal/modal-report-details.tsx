@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search, X, FileDown } from "lucide-react"
 import { getCategoryIcon } from "@/lib/category-icons"
 import { Button } from "../ui/button"
+import { Input } from "../ui/input"
+import { ExportMonthlyModal } from "./export-monthly-modal"
 
 interface ReportData {
     transactions: any[]
@@ -46,6 +48,7 @@ interface ReportDetailsModalProps {
     startDate: string
     endDate: string
     monthLabel: string
+    onEditTransaction?: (transaction: any) => void
 }
 
 export function ReportDetailsModal({
@@ -53,13 +56,26 @@ export function ReportDetailsModal({
     onOpenChange,
     startDate,
     endDate,
-    monthLabel
+    monthLabel,
+    onEditTransaction
 }: ReportDetailsModalProps) {
     const [reportData, setReportData] = useState<ReportData | null>(null)
     const [loading, setLoading] = useState(false)
     const [activeTab, setActiveTab] = useState("chart")
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
     const [categoryType, setCategoryType] = useState<'expense' | 'income' | null>(null)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [exportModalOpen, setExportModalOpen] = useState(false)
+
+    const handleEditTransaction = (transaction: any) => {
+        onEditTransaction?.(transaction)
+        onOpenChange(false)
+    }
+
+    // Reset search when category changes
+    useEffect(() => {
+        setSearchQuery("")
+    }, [selectedCategory])
 
     useEffect(() => {
         if (open && startDate && endDate) {
@@ -135,7 +151,7 @@ export function ReportDetailsModal({
     const getCategoryTransactions = () => {
         if (!reportData || !selectedCategory) return []
 
-        return reportData.transactions
+        const filtered = reportData.transactions
             .filter(t => {
                 if (categoryType === 'expense') {
                     return t.type === 'EXPENSE' && t.categories?.name === selectedCategory
@@ -144,7 +160,18 @@ export function ReportDetailsModal({
                 }
                 return false
             })
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+        // Apply search filter
+        const searched = searchQuery.trim() === ''
+            ? filtered
+            : filtered.filter(t => {
+                const query = searchQuery.toLowerCase()
+                const description = (t.description || '').toLowerCase()
+                const wallet = (t.accounts?.name || '').toLowerCase()
+                return description.includes(query) || wallet.includes(query)
+            })
+
+        return searched.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     }
 
     const categoryTransactions = getCategoryTransactions()
@@ -170,7 +197,18 @@ export function ReportDetailsModal({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader className="flex-shrink-0">
-                    <DialogTitle>Report Details</DialogTitle>
+                    <div className="flex items-center justify-between mt-4">
+                        <DialogTitle>Report Details</DialogTitle>
+                        <Button
+                            onClick={() => setExportModalOpen(true)}
+                            variant="outline"
+                            size="sm"
+                            className="cursor-pointer"
+                        >
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Export
+                        </Button>
+                    </div>
                 </DialogHeader>
 
                 {loading ? (
@@ -270,6 +308,26 @@ export function ReportDetailsModal({
                                                 <p className="text-sm text-muted-foreground">{monthLabel}</p>
                                             </div>
 
+                                            {/* Search Input */}
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Search by description or wallet..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    className="pl-9 pr-9"
+                                                />
+                                                {searchQuery && (
+                                                    <button
+                                                        onClick={() => setSearchQuery("")}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+
                                             {/* Transaction List */}
                                             <div className="space-y-2">
                                                 {categoryTransactions.length > 0 ? (
@@ -282,7 +340,8 @@ export function ReportDetailsModal({
                                                         return (
                                                             <div
                                                                 key={transaction.id}
-                                                                className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 border"
+                                                                className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 border cursor-pointer transition-colors"
+                                                                onClick={() => handleEditTransaction(transaction)}
                                                             >
                                                                 <div className="flex items-center gap-3">
                                                                     <div
@@ -478,6 +537,15 @@ export function ReportDetailsModal({
                     </div>
                 )}
             </DialogContent>
+
+            {/* Export Modal */}
+            <ExportMonthlyModal
+                open={exportModalOpen}
+                onOpenChange={setExportModalOpen}
+                startDate={startDate}
+                endDate={endDate}
+                monthLabel={monthLabel}
+            />
         </Dialog>
     )
 }

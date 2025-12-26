@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { Logo } from '@/components/logo'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Snowflake } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import React from 'react'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ import { ModeToggle } from './theme-toggle'
 import useAuth from '@/hooks/useAuth'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useSnowfall } from '@/contexts/SnowfallContext'
 
 
 const menuItems = [
@@ -24,6 +25,7 @@ export const HeroHeader = () => {
 
     const { user, loading } = useAuth() || {};
     const router = useRouter();
+    const { isSnowfallEnabled, toggleSnowfall } = useSnowfall();
     const handleSignOut = async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
@@ -95,6 +97,14 @@ export const HeroHeader = () => {
                                 </div>
                             )}
                             <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+                                <Button
+                                    onClick={toggleSnowfall}
+                                    variant="outline"
+                                    size="sm"
+                                    className="cursor-pointer"
+                                    title={isSnowfallEnabled ? 'Disable Snowfall' : 'Enable Snowfall'}>
+                                    <Snowflake className={cn("h-4 w-4", isSnowfallEnabled && "text-blue-500")} />
+                                </Button>
                                 <ModeToggle />
                                 {/* ✅ Conditional buttons based on auth state */}
                                 {!loading && (

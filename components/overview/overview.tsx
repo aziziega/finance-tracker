@@ -14,7 +14,11 @@ import { ReportDetailsModal } from "@/components/modal/modal-report-details"
 
 type TimeRange = '1m' | '6m' | '1y' | 'custom'
 
-export function Overview() {
+interface OverviewProps {
+  onEditTransaction?: (transaction: any) => void
+}
+
+export function Overview({ onEditTransaction }: OverviewProps = {}) {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('6m')
   const [customStartDate, setCustomStartDate] = useState<Date>()
   const [customEndDate, setCustomEndDate] = useState<Date>()
@@ -319,6 +323,7 @@ export function Overview() {
           startDate={selectedPeriod.startDate}
           endDate={selectedPeriod.endDate}
           monthLabel={selectedPeriod.label}
+          onEditTransaction={onEditTransaction}
         />
       )}
     </div>
