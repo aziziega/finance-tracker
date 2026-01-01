@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
 
     let finalCategoryId = categoryId
 
+    // Auto-fetch Transfer category
     if (type === 'TRANSFER') {
-      // ✅ Auto-fetch Transfer category dari database
       const { data: transferCategory } = await supabase
         .from('categories')
         .select('id')
@@ -107,160 +107,51 @@ export async function POST(request: NextRequest) {
         .single()
       
       finalCategoryId = transferCategory?.id
-    } else {
-      // INCOME/EXPENSE tetap require categoryId
-      if (!categoryId) {
-        return NextResponse.json({ 
-          error: 'Category is required for non-transfer transactions' 
-        }, { status: 400 })
-      }
-    }
-
-    if (type === 'TRANSFER' && !toAccountId) {
+    } else if (!categoryId) {
       return NextResponse.json({ 
-        error: 'Destination account is required for transfer' 
+        error: 'Category is required for non-transfer transactions' 
       }, { status: 400 })
     }
 
-    if (type === 'TRANSFER' && accountId === toAccountId) {
+    // ✅ Call stored procedure instead of manual transaction
+    const { data, error } = await supabase.rpc('create_transaction', {
+      p_user_id: user.id,
+      p_type: type.toUpperCase(),
+      p_amount: Number(amount),
+      p_account_id: accountId,
+      p_category_id: finalCategoryId,
+      p_to_account_id: toAccountId || null,
+      p_description: description || null,
+      p_date: date
+    })
+
+    if (error) {
+      console.error('RPC error:', error)
       return NextResponse.json({ 
-        error: 'Source and destination accounts must be different' 
-      }, { status: 400 })
-    }
-
-    const transactionAmount = Number(amount)
-    if (transactionAmount <= 0) {
-      return NextResponse.json({ 
-        error: 'Amount must be greater than 0' 
-      }, { status: 400 })
-    }
-
-    // Verify accounts belong to user
-    const { data: sourceAccount } = await supabase
-      .from('accounts')
-      .select('id, balance, user_id')
-      .eq('id', accountId)
-      .single()
-
-    if (!sourceAccount || sourceAccount.user_id !== user.id) {
-      return NextResponse.json({ 
-        error: 'Source account not found or unauthorized' 
-      }, { status: 404 })
-    }
-
-    // Check sufficient balance for EXPENSE and TRANSFER
-    if ((type === 'EXPENSE' || type === 'TRANSFER') && sourceAccount.balance < transactionAmount) {
-      return NextResponse.json({ 
-        error: 'Insufficient balance in source account' 
-      }, { status: 400 })
-    }
-
-    let destinationAccount = null
-    if (type === 'TRANSFER') {
-      const { data: destAccount } = await supabase
-        .from('accounts')
-        .select('id, balance, user_id')
-        .eq('id', toAccountId)
-        .single()
-
-      if (!destAccount || destAccount.user_id !== user.id) {
-        return NextResponse.json({ 
-          error: 'Destination account not found or unauthorized' 
-        }, { status: 404 })
-      }
-      destinationAccount = destAccount
-    }
-
-    // Start transaction logic
-    // 1. Create transaction record
-    const transactionData: any = {
-      type: type.toUpperCase(),
-      amount: transactionAmount,
-      accountId,
-      date,
-      description: description || null,
-      toAccountId: type === 'TRANSFER' ? toAccountId : null
-    }
-
-    if (finalCategoryId) {
-      transactionData.categoryId = finalCategoryId
-    }
-
-    const { data: transaction, error: transactionError } = await supabase
-      .from('transactions')
-      .insert([transactionData])
-      .select()
-      .single()
-
-    if (transactionError) {
-      console.error('Create transaction error:', transactionError)
-      return NextResponse.json({ 
-        error: transactionError.message || 'Failed to create transaction' 
+        error: error.message 
       }, { status: 500 })
     }
 
-    // 2. Update account balances
-    let newSourceBalance = sourceAccount.balance
-
-    if (type === 'EXPENSE' || type === 'TRANSFER') {
-      newSourceBalance -= transactionAmount
-    } else if (type === 'INCOME') {
-      newSourceBalance += transactionAmount
-    }
-
-    const { error: updateSourceError } = await supabase
-      .from('accounts')
-      .update({ balance: newSourceBalance })
-      .eq('id', accountId)
-      .eq('user_id', user.id)
-
-    if (updateSourceError) {
-      // Rollback: delete transaction
-      await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transaction.id)
-
-      console.error('Update source account error:', updateSourceError)
+    // Check result from stored procedure
+    if (!data.success) {
+      const statusCode = data.error === 'INSUFFICIENT_BALANCE' ? 400 : 
+                        data.error === 'UNAUTHORIZED' ? 403 :
+                        data.error === 'ACCOUNT_NOT_FOUND' ? 404 : 400
+      
       return NextResponse.json({ 
-        error: 'Failed to update source account balance' 
-      }, { status: 500 })
-    }
-
-    // 3. For TRANSFER: update destination account
-    if (type === 'TRANSFER' && destinationAccount) {
-      const newDestBalance = destinationAccount.balance + transactionAmount
-
-      const { error: updateDestError } = await supabase
-        .from('accounts')
-        .update({ balance: newDestBalance })
-        .eq('id', toAccountId)
-
-      if (updateDestError) {
-        // Rollback: revert source account and delete transaction
-        await supabase
-          .from('accounts')
-          .update({ balance: sourceAccount.balance })
-          .eq('id', accountId)
-          .eq('user_id', user.id)
-
-        await supabase
-          .from('transactions')
-          .delete()
-          .eq('id', transaction.id)
-
-        console.error('Update destination account error:', updateDestError)
-        return NextResponse.json({ 
-          error: 'Failed to update destination account balance' 
-        }, { status: 500 })
-      }
+        error: data.error,
+        message: data.message,
+        details: data
+      }, { status: statusCode })
     }
 
     return NextResponse.json({ 
-      transaction,
       success: true,
-      message: 'Transaction created successfully'
+      transaction_id: data.transaction_id,
+      message: data.message,
+      details: data.details
     }, { status: 201 })
+
   } catch (error) {
     console.error('Create transaction error:', error)
     return NextResponse.json({ 

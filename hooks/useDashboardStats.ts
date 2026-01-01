@@ -21,21 +21,15 @@ export function useDashboardStats() {
     try {
       setLoading(true)
       const response = await fetch('/api/dashboard/stats')
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats')
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch')
       const data = await response.json()
       setStats(data)
-      setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
-      console.error('Failed to fetch dashboard stats:', err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, []) 
 
   useEffect(() => {
     fetchStats()
