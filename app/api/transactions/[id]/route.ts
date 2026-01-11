@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { rateLimit, getClientIdentifier, RateLimitPresets, createRateLimitResponse } from '@/lib/rate-limit'
 
 export async function DELETE(
   request: NextRequest,
@@ -11,6 +12,20 @@ export async function DELETE(
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting: 5 requests per minute for deletes
+    const rateLimitResult = await rateLimit(
+      getClientIdentifier(request, user.id),
+      RateLimitPresets.strict
+    )
+
+    if (!rateLimitResult.success) {
+      const response = createRateLimitResponse(rateLimitResult)
+      return NextResponse.json(response.body, { 
+        status: response.status,
+        headers: response.headers 
+      })
     }
 
     const { id } = await params
@@ -62,6 +77,20 @@ export async function PUT(
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting: 5 requests per minute for updates
+    const rateLimitResult = await rateLimit(
+      getClientIdentifier(request, user.id),
+      RateLimitPresets.strict
+    )
+
+    if (!rateLimitResult.success) {
+      const response = createRateLimitResponse(rateLimitResult)
+      return NextResponse.json(response.body, { 
+        status: response.status,
+        headers: response.headers 
+      })
     }
 
     const { id } = await params

@@ -9,8 +9,20 @@ import { SnowfallProvider } from "@/contexts/SnowfallContext";
 
 
 export const metadata: Metadata = {
-  title: 'Finance Tracker',
-  description: 'Personal Finance Management System',
+  title: 'Finance Tracker - Manage Your Money Wisely',
+  description: 'Track expenses, manage wallets, and monitor your financial health with our intuitive finance tracking app.',
+  keywords: ['finance', 'money', 'budget', 'expense tracker', 'wallet management'],
+  authors: [{ name: 'Your Name' }],
+  openGraph: {
+    title: 'Finance Tracker',
+    description: 'Personal Finance Management System',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Finance Tracker',
+    description: 'Manage Your Money Wisely',
+  },
 }
 
 export default function RootLayout({

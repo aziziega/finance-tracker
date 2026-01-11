@@ -19,7 +19,7 @@ export async function GET() {
       .order('name', { ascending: true })
 
     if (error) {
-      console.log('Database error:', error)
+      // console.log('Database error:', error)
       return NextResponse.json({ 
         error: error.message, 
         categories: [],

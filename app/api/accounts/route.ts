@@ -1,13 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { rateLimit, getClientIdentifier, RateLimitPresets, createRateLimitResponse } from '@/lib/rate-limit'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting: 60 requests per minute for reads
+    const rateLimitResult = await rateLimit(
+      getClientIdentifier(request, user.id),
+      RateLimitPresets.relaxed
+    )
+
+    if (!rateLimitResult.success) {
+      const response = createRateLimitResponse(rateLimitResult)
+      return NextResponse.json(response.body, { 
+        status: response.status,
+        headers: response.headers 
+      })
     }
 
     // Get all user's accounts (both default and custom)
@@ -19,7 +34,7 @@ export async function GET() {
       .order('name', { ascending: true })
 
     if (error) {
-      console.log('Database error:', error)
+      // console.log('Database error:', error)
       return NextResponse.json({ 
         error: error.message,
         accounts: [],
@@ -48,12 +63,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { name, balance } = await request.json()
-    // Validate input
-    if (!name) {
-      return NextResponse.json({ error: 'Wallet name is required' }, { status: 400 })
+    // Rate limiting: 5 requests per minute for creates
+    const rateLimitResult = await rateLimit(
+      getClientIdentifier(request, user.id),
+      RateLimitPresets.strict
+    )
+
+    if (!rateLimitResult.success) {
+      const response = createRateLimitResponse(rateLimitResult)
+      return NextResponse.json(response.body, { 
+        status: response.status,
+        headers: response.headers 
+      })
     }
 
+    // Parse request body
+    const { name, balance } = await request.json()
+
+    if (!name || name.trim() === '') {
+      return NextResponse.json({ 
+        error: 'Account name is required' 
+      }, { status: 400 })
+    }
+
+    // Create account
     const { data: account, error } = await supabase
       .from('accounts')
       .insert([{

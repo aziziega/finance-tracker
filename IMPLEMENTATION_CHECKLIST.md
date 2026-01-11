@@ -1,16 +1,21 @@
-# 🎯 Implementation Checklist - Stored Procedures
+# 🎯 Implementation Checklist - Stored Procedures & Rate Limiting
 
 ## ✅ Yang Sudah Dikerjakan
 
 ### 1. **Route API Sudah Diupdate** ✅
 
 #### **File yang sudah diubah:**
-- ✅ `app/api/transactions/route.ts` - POST method
-- ✅ `app/api/transactions/[id]/route.ts` - PUT & DELETE methods
+- ✅ `app/api/transactions/route.ts` - POST method + Rate limiting
+- ✅ `app/api/transactions/[id]/route.ts` - PUT & DELETE methods + Rate limiting
+- ✅ `app/api/accounts/route.ts` - GET & POST + Rate limiting
+- ✅ `app/api/accounts/[id]/route.ts` - PUT & DELETE + Rate limiting
+- ✅ `app/api/user/initialize/route.ts` - POST + Rate limiting
+- ✅ `app/api/reports/export/route.ts` - GET + Rate limiting
 
 #### **Perubahan:**
 - ❌ **Cara Lama:** Manual transaction dengan multiple queries (prone to race condition)
 - ✅ **Cara Baru:** Pakai stored procedure `supabase.rpc()` (atomic & safe)
+- ✅ **Security:** Rate limiting implemented untuk prevent API abuse
 
 **Hasil:**
 ```typescript
@@ -20,6 +25,13 @@ const { error } = await supabase.from('accounts').update({ balance: ... })
 // Jika error di step 2, data sudah rusak!
 
 // Sesudah
+// 1. Rate limiting check
+const rateLimitResult = await rateLimit(getClientIdentifier(request, user.id))
+if (!rateLimitResult.success) {
+  return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+}
+
+// 2. Stored procedure call
 const { data, error } = await supabase.rpc('create_transaction', {
   p_user_id: user.id,
   p_type: type,
@@ -28,6 +40,30 @@ const { data, error } = await supabase.rpc('create_transaction', {
 })
 // Semua atomic! Error = auto rollback!
 ```
+
+### 2. **Rate Limiting System** ✅
+
+#### **Files Created:**
+- ✅ `lib/rate-limit.ts` - Core rate limiting logic
+- ✅ `RATE_LIMITING_README.md` - Documentation
+
+#### **Features:**
+- Token bucket algorithm
+- In-memory storage (MVP)
+- Per-user tracking
+- Automatic cleanup
+- Configurable presets:
+  - **Strict:** 5 requests/min (Create/Update/Delete)
+  - **Standard:** 20 requests/min (General)
+  - **Relaxed:** 60 requests/min (Read operations)
+  - **Auth:** 5 requests/5min (Authentication)
+  - **Export:** 3 requests/5min (PDF/CSV generation)
+
+#### **Protected Endpoints:**
+- ✅ All transaction operations
+- ✅ All account operations
+- ✅ User initialization
+- ✅ Report exports
 
 ---
 

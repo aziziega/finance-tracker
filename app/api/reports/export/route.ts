@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { format } from 'date-fns'
 import chromium from '@sparticuz/chromium'
 import puppeteer from 'puppeteer-core'
+import { rateLimit, getClientIdentifier, RateLimitPresets, createRateLimitResponse } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
     try {
@@ -11,6 +12,20 @@ export async function GET(request: NextRequest) {
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        // Rate limiting: Very strict for resource-intensive export (3 requests per 5 minutes)
+        const rateLimitResult = await rateLimit(
+            getClientIdentifier(request, user.id),
+            RateLimitPresets.export
+        )
+
+        if (!rateLimitResult.success) {
+            const response = createRateLimitResponse(rateLimitResult)
+            return NextResponse.json(response.body, { 
+                status: response.status,
+                headers: response.headers 
+            })
         }
 
         const searchParams = request.nextUrl.searchParams
@@ -363,9 +378,9 @@ async function generatePDF(transactions: any[], dateRange: string, startDate: st
         try {
             browser = await puppeteer.launch({
                 args: chromium.args,
-                defaultViewport: chromium.defaultViewport,
+                 defaultViewport: null,
                 executablePath: await chromium.executablePath(),
-                headless: chromium.headless,
+                headless: true,
             })
         } catch (launchError) {
             console.error('Puppeteer launch failed, falling back to HTML:', launchError)
@@ -387,7 +402,7 @@ async function generatePDF(transactions: any[], dateRange: string, startDate: st
         })
 
         // Generate PDF
-        const pdf = await page.pdf({
+        const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
             margin: {
@@ -400,8 +415,8 @@ async function generatePDF(transactions: any[], dateRange: string, startDate: st
 
         await browser.close()
 
-        // Return PDF
-        return new NextResponse(pdf, {
+        // Return PDF with proper Buffer type
+        return new NextResponse(Buffer.from(pdfBuffer), {
             headers: {
                 'Content-Type': 'application/pdf',
                 'Content-Disposition': `attachment; filename="transactions-${dateRange}.pdf"`,

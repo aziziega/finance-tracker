@@ -1,15 +1,30 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { rateLimit, getClientIdentifier, RateLimitPresets, createRateLimitResponse } from '@/lib/rate-limit'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    console.log('🔍 User check:', { user: user?.id, error: userError })
+    // console.log('🔍 User check:', { user: user?.id, error: userError })
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting: Very strict for initialization (5 requests per 5 minutes)
+    const rateLimitResult = await rateLimit(
+      getClientIdentifier(request, user.id),
+      RateLimitPresets.auth
+    )
+
+    if (!rateLimitResult.success) {
+      const response = createRateLimitResponse(rateLimitResult)
+      return NextResponse.json(response.body, { 
+        status: response.status,
+        headers: response.headers 
+      })
     }
 
     // ✅ Check if user already initialized
@@ -19,7 +34,7 @@ export async function POST() {
       .eq('user_id', user.id)
       .limit(1)
 
-    console.log('🔍 Existing accounts check:', { count: existingAccounts?.length, error: checkError })
+    // console.log('🔍 Existing accounts check:', { count: existingAccounts?.length, error: checkError })
 
     if (existingAccounts && existingAccounts.length > 0) {
       return NextResponse.json({ 
@@ -34,14 +49,14 @@ export async function POST() {
       .select('*')
       .order('order_index', { ascending: true })
 
-    console.log('🔍 Wallet templates:', { count: walletTemplates?.length, error: walletError })
+    // console.log('🔍 Wallet templates:', { count: walletTemplates?.length, error: walletError })
 
     const { data: categoryTemplates, error: categoryError } = await supabase
       .from('default_category_templates')
       .select('*')
       .order('order_index', { ascending: true })
 
-    console.log('🔍 Category templates:', { count: categoryTemplates?.length, error: categoryError })
+    // console.log('🔍 Category templates:', { count: categoryTemplates?.length, error: categoryError })
 
     if (walletError || categoryError) {
       throw new Error(`Template fetch failed: ${walletError?.message || categoryError?.message}`)
@@ -55,7 +70,7 @@ export async function POST() {
       user_id: user.id
     }))
 
-    console.log('🔍 Accounts to insert:', accountsToInsert.length)
+    // console.log('🔍 Accounts to insert:', accountsToInsert.length)
 
     if (accountsToInsert.length > 0) {
       const { error: accountInsertError } = await supabase
@@ -85,7 +100,7 @@ export async function POST() {
       user_id: user.id
     }))
 
-    console.log('🔍 Categories to insert:', categoriesToInsert.length)
+    // console.log('🔍 Categories to insert:', categoriesToInsert.length)
 
     // Line 89-104, ganti dengan:
 if (categoriesToInsert.length > 0) {
@@ -105,7 +120,7 @@ if (categoriesToInsert.length > 0) {
     }
   }
   
-  console.log(`✅ Successfully inserted ${successCount}/${categoriesToInsert.length} categories`)
+  // console.log(`✅ Successfully inserted ${successCount}/${categoriesToInsert.length} categories`)
 }
 
 // Do the same for accounts (line 63-76)
@@ -125,10 +140,10 @@ if (accountsToInsert.length > 0) {
     }
   }
   
-  console.log(`✅ Successfully inserted ${successCount}/${accountsToInsert.length} accounts`)
+  // console.log(`✅ Successfully inserted ${successCount}/${accountsToInsert.length} accounts`)
 }
 
-    console.log('✅ Initialization successful')
+    // console.log('✅ Initialization successful')
 
     return NextResponse.json({ 
       message: 'User initialized successfully',

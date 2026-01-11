@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { error } from 'console'
+import { rateLimit, getClientIdentifier, RateLimitPresets, createRateLimitResponse } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,6 +10,20 @@ export async function GET(request: NextRequest) {
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting: 60 requests per minute for reads
+    const rateLimitResult = await rateLimit(
+      getClientIdentifier(request, user.id),
+      RateLimitPresets.relaxed
+    )
+
+    if (!rateLimitResult.success) {
+      const response = createRateLimitResponse(rateLimitResult)
+      return NextResponse.json(response.body, { 
+        status: response.status,
+        headers: response.headers 
+      })
     }
 
     const { searchParams } = new URL(request.url)
@@ -83,6 +98,20 @@ export async function POST(request: NextRequest) {
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting: 5 requests per minute for creates
+    const rateLimitResult = await rateLimit(
+      getClientIdentifier(request, user.id),
+      RateLimitPresets.strict
+    )
+
+    if (!rateLimitResult.success) {
+      const response = createRateLimitResponse(rateLimitResult)
+      return NextResponse.json(response.body, { 
+        status: response.status,
+        headers: response.headers 
+      })
     }
 
     const body = await request.json()
