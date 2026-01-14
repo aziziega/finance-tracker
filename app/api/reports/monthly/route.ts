@@ -101,9 +101,10 @@ export async function GET(request: Request) {
     const expensesByCategory = transactions
       .filter(t => t.type === 'EXPENSE')
       .reduce((acc: any[], transaction) => {
-        const categoryName = transaction.categories?.name || 'Uncategorized'
-        const categoryColor = transaction.categories?.color || '#6B7280'
-        const categoryIcon = transaction.categories?.icon || 'circle'
+        const category = Array.isArray(transaction.categories) ? transaction.categories[0] : transaction.categories
+        const categoryName = category?.name || 'Uncategorized'
+        const categoryColor = category?.color || '#6B7280'
+        const categoryIcon = category?.icon || 'circle'
         
         const existing = acc.find(item => item.category === categoryName)
         if (existing) {
@@ -130,9 +131,10 @@ export async function GET(request: Request) {
     const incomesByCategory = transactions
       .filter(t => t.type === 'INCOME')
       .reduce((acc: any[], transaction) => {
-        const categoryName = transaction.categories?.name || 'Uncategorized'
-        const categoryColor = transaction.categories?.color || '#6B7280'
-        const categoryIcon = transaction.categories?.icon || 'circle'
+        const category = Array.isArray(transaction.categories) ? transaction.categories[0] : transaction.categories
+        const categoryName = category?.name || 'Uncategorized'
+        const categoryColor = category?.color || '#6B7280'
+        const categoryIcon = category?.icon || 'circle'
         
         const existing = acc.find(item => item.category === categoryName)
         if (existing) {
