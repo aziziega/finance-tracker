@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/context/AuthProvider";
 import { Toaster } from "sonner";
 import type { Metadata } from 'next'
 import { SnowfallProvider } from "@/contexts/SnowfallContext";
+import Footer from "@/components/footer";
 
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default function RootLayout({
             </AuthProvider>
           </SnowfallProvider>
           <Toaster position="top-right" />
+          <Footer/>
         </ThemeProvider>
       </body>
     </html >
