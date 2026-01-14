@@ -1,6 +1,8 @@
-# 💰 Finance Tracker
+# 💰 LiatDuit
 
-A modern, full-stack personal finance management application built with Next.js 16, TypeScript, and Supabase. Track your expenses, manage accounts, set financial goals, and monitor your financial health with an intuitive dashboard.
+**LiatDuit** adalah aplikasi manajemen keuangan pribadi modern yang dibangun dengan Next.js 16, TypeScript, dan Supabase. Lacak pengeluaran, kelola akun, tetapkan tujuan keuangan, dan pantau kesehatan finansial Anda dengan dashboard yang intuitif.
+
+> **LiatDuit** = "Lihat Uang" dalam Bahasa Indonesia - Aplikasi untuk memantau dan mengelola keuangan Anda dengan mudah.
 
 ## 🚀 Features
 
@@ -58,7 +60,61 @@ A modern, full-stack personal finance management application built with Next.js 
 - Recurring transactions
 - Multi-currency support
 
-## 🛠️ Tech Stack
+## � Quick Start
+
+### **Prerequisites**
+- Node.js 18+ installed
+- npm or yarn package manager
+- Supabase account (free tier available)
+
+### **Installation**
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/aziziega/finance-tracker.git
+   cd finance-tracker
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Setup environment variables**
+   ```bash
+   # Create .env.local file (NEVER commit this!)
+   cp .env.example .env.local
+   
+   # Add your Supabase credentials:
+   NEXT_PUBLIC_SUPABASE_URL=your_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   ```
+
+4. **Setup database**
+   - Login to [Supabase Dashboard](https://supabase.com/dashboard)
+   - Open SQL Editor
+   - Run `supabase-stored-procedures.sql`
+   - See `DATABASE_SETUP.md` for detailed instructions
+
+5. **Run development server**
+   ```bash
+   npm run dev
+   ```
+   
+   Open [http://localhost:3000](http://localhost:3000)
+
+### **First-Time Setup**
+1. Create an account via `/signup`
+2. Default wallets and categories will be auto-created
+3. Start adding transactions!
+
+### **📖 Documentation**
+- **Complete Setup Guide:** `DATABASE_SETUP.md`
+- **Deployment Checklist:** `DEPLOYMENT_CHECKLIST.md` (if available)
+- **Rate Limiting:** `RATE_LIMITING_README.md`
+- **All Docs:** `DOCS_INDEX.md`
+
+## �🛠️ Tech Stack
 
 ### **Frontend**
 - **Framework:** Next.js 16.0.1 (App Router)
@@ -75,7 +131,7 @@ A modern, full-stack personal finance management application built with Next.js 
 - **API:** Next.js API Routes (App Router)
 - **ORM:** Supabase Client SDK
 - **Stored Procedures:** PostgreSQL PL/pgSQL (Atomic transactions)
-- **Rate Limiting:** Token Bucket Algorithm (Upstash Redis)
+- **Rate Limiting:** Token Bucket Algorithm (In-memory - Upstash Redis recommended for production)
 - **Security:** Row Level Security (RLS), SECURITY DEFINER functions
 
 ### **Development Tools**
@@ -87,7 +143,7 @@ A modern, full-stack personal finance management application built with Next.js 
 ## 📁 Project Structure
 
 ```
-finance-tracker/
+liatduit/ (or finance-tracker/)
 ├── app/                          # Next.js App Router
 │   ├── (auth)/                   # Authentication routes group
 │   │   ├── layout.tsx           # Auth pages layout
@@ -547,19 +603,81 @@ Implemented custom rate limiting using Token Bucket Algorithm:
 
 ## 🚀 Deployment
 
+### **⚠️ Important: Before Deploying to Production**
+
+#### **1. Environment Variables Security**
+```bash
+# NEVER commit .env files to git!
+# Make sure .gitignore includes:
+.env*
+.env.local
+.env.production
+```
+
+**Required Environment Variables for Vercel:**
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+**⚠️ SECURITY WARNING:**
+- **NEVER** use `NEXT_PUBLIC_SERVICE_ROLE_KEY` - this exposes admin access to client!
+- Service role key should only be used server-side in secure environments
+- Rotate all keys if accidentally committed to git
+
+#### **2. Rate Limiting (Production)**
+Current implementation uses in-memory storage (not suitable for multiple Vercel instances).
+
+**Recommended: Upgrade to Upstash Redis**
+```bash
+npm install @upstash/ratelimit @upstash/redis
+
+# Add to Vercel Environment Variables:
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+```
+
+**Alternative:** Temporarily disable rate limiting for initial deployment.
+
+#### **3. Database Setup (One-time)**
+```sql
+-- In Supabase SQL Editor:
+-- 1. Run supabase-stored-procedures.sql
+-- 2. Verify installation:
+SELECT proname FROM pg_proc WHERE proname LIKE '%transaction%';
+-- 3. Refresh schema:
+NOTIFY pgrst, 'reload schema';
+```
+
 ### **Recommended Platform: Vercel**
+
+#### **Deploy via GitHub (Recommended)**
+```bash
+1. Push code to GitHub
+2. Import project in Vercel Dashboard
+3. Add environment variables (see above)
+4. Deploy automatically
+```
+
+#### **Deploy via Vercel CLI**
 ```bash
 # Install Vercel CLI
 npm i -g vercel
+
+# Login
+vercel login
 
 # Deploy
 vercel --prod
 ```
 
-### **Environment Variables**
-Ensure these are set in your deployment platform:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+### **Post-Deployment Checklist**
+- [ ] Test authentication (login/signup)
+- [ ] Create transactions (all 3 types: INCOME, EXPENSE, TRANSFER)
+- [ ] Verify balance updates are atomic
+- [ ] Test on mobile devices
+- [ ] Check Vercel function logs for errors
+- [ ] Monitor Supabase database usage
 
 ### **Build Configuration**
 ```json
@@ -623,7 +741,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## 📞 Contact
 
 **Developer:** [aziziega](https://github.com/aziziega)  
-**Project Link:** [https://github.com/aziziega/finance-tracker](https://github.com/aziziega/finance-tracker)
+**Project:** LiatDuit (Finance Tracker)  
+**Repository:** [https://github.com/aziziega/finance-tracker](https://github.com/aziziega/finance-tracker)
 
 ## 🙏 Acknowledgments
 
