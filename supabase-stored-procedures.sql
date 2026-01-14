@@ -3,13 +3,24 @@
 -- ============================================
 -- Description: Atomic transaction operations to ensure data consistency
 -- Author: Finance Tracker Team
--- Date: 2025-12-29
+-- Last Updated: 2026-01-13
+-- 
+-- ⚠️ IMPORTANT: Database Schema Requirements
+-- - accounts.id: TEXT (not UUID)
+-- - accounts.user_id: UUID
+-- - transactions.accountId: TEXT
+-- - transactions.categoryId: TEXT
+-- - transactions.toAccountId: TEXT
+-- - transactions.type: TransactionType (enum)
+-- - transactions.is_initial_balance: BOOLEAN
+-- - accounts table does NOT have updated_at column
 -- 
 -- CARA PAKAI:
 -- 1. Login ke Supabase Dashboard
 -- 2. Buka SQL Editor
 -- 3. Copy-paste semua SQL di bawah ini
 -- 4. Klik "Run" untuk execute
+-- 5. Run: NOTIFY pgrst, 'reload schema';
 -- ============================================
 
 -- ============================================
@@ -21,15 +32,16 @@
 --   - Automatic balance validation
 --   - Auto-rollback on error
 --   - Support INCOME, EXPENSE, and TRANSFER types
+--   - TEXT-based ID compatibility (not UUID)
 -- ============================================
 
 CREATE OR REPLACE FUNCTION create_transaction(
-  p_user_id uuid,
-  p_type text,
+  p_user_id text,           -- TEXT karena compatibility dengan auth.users
+  p_type text,              -- Akan di-cast ke TransactionType enum
   p_amount numeric,
-  p_account_id uuid,
-  p_category_id uuid,
-  p_to_account_id uuid DEFAULT NULL,
+  p_account_id text,        -- TEXT sesuai accounts.id
+  p_category_id text DEFAULT NULL,
+  p_to_account_id text DEFAULT NULL,
   p_description text DEFAULT NULL,
   p_date timestamptz DEFAULT NOW()
 )
@@ -79,7 +91,7 @@ BEGIN
   END IF;
 
   -- Verify account ownership
-  IF v_source_user_id != p_user_id THEN
+  IF v_source_user_id::text != p_user_id THEN
     RETURN json_build_object(
       'success', false,
       'error', 'UNAUTHORIZED',
@@ -132,7 +144,7 @@ BEGIN
     END IF;
 
     -- Verify destination account ownership
-    IF v_dest_user_id != p_user_id THEN
+    IF v_dest_user_id::text != p_user_id THEN
       RETURN json_build_object(
         'success', false,
         'error', 'UNAUTHORIZED',
@@ -152,7 +164,7 @@ BEGIN
       v_new_dest_balance := v_dest_balance + p_amount;
   END CASE;
 
-  -- Insert transaction record
+  -- Insert transaction record (cast type to enum)
   INSERT INTO transactions (
     type,
     amount,
@@ -163,7 +175,7 @@ BEGIN
     date,
     is_initial_balance
   ) VALUES (
-    p_type,
+    p_type::"TransactionType",  -- Cast to enum type
     p_amount,
     p_account_id,
     p_category_id,
@@ -174,20 +186,16 @@ BEGIN
   )
   RETURNING id INTO v_transaction_id;
 
-  -- Update source account balance
+  -- Update source account balance (no updated_at column)
   UPDATE accounts
-  SET balance = v_new_source_balance,
-      updated_at = NOW()
-  WHERE id = p_account_id
-    AND user_id = p_user_id;
+  SET balance = v_new_source_balance
+  WHERE id = p_account_id;
 
   -- Update destination account balance (if TRANSFER)
   IF p_type = 'TRANSFER' THEN
     UPDATE accounts
-    SET balance = v_new_dest_balance,
-        updated_at = NOW()
-    WHERE id = p_to_account_id
-      AND user_id = p_user_id;
+    SET balance = v_new_dest_balance
+    WHERE id = p_to_account_id;
   END IF;
 
   -- Return success with transaction details
@@ -232,13 +240,13 @@ GRANT EXECUTE ON FUNCTION create_transaction TO authenticated;
 -- ============================================
 
 CREATE OR REPLACE FUNCTION update_transaction(
-  p_user_id uuid,
-  p_transaction_id uuid,
+  p_user_id text,           -- TEXT untuk compatibility
+  p_transaction_id uuid,    -- Transaction ID tetap UUID
   p_type text,
   p_amount numeric,
-  p_account_id uuid,
-  p_category_id uuid,
-  p_to_account_id uuid DEFAULT NULL,
+  p_account_id text,        -- TEXT sesuai accounts.id
+  p_category_id text,       -- TEXT sesuai categories.id
+  p_to_account_id text DEFAULT NULL,
   p_description text DEFAULT NULL,
   p_date timestamptz DEFAULT NOW()
 )
@@ -428,8 +436,8 @@ GRANT EXECUTE ON FUNCTION update_transaction TO authenticated;
 -- ============================================
 
 CREATE OR REPLACE FUNCTION delete_transaction(
-  p_user_id uuid,
-  p_transaction_id uuid
+  p_user_id text,           -- TEXT untuk compatibility
+  p_transaction_id uuid     -- Transaction ID tetap UUID
 )
 RETURNS json
 LANGUAGE plpgsql

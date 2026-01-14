@@ -72,8 +72,11 @@ A modern, full-stack personal finance management application built with Next.js 
 ### **Backend**
 - **Database:** Supabase (PostgreSQL)
 - **Authentication:** Supabase Auth
-- **API:** Next.js API Routes
+- **API:** Next.js API Routes (App Router)
 - **ORM:** Supabase Client SDK
+- **Stored Procedures:** PostgreSQL PL/pgSQL (Atomic transactions)
+- **Rate Limiting:** Token Bucket Algorithm (Upstash Redis)
+- **Security:** Row Level Security (RLS), SECURITY DEFINER functions
 
 ### **Development Tools**
 - **Package Manager:** npm
@@ -454,19 +457,93 @@ DELETE /api/transactions/:id    # Delete transaction
 ## 🔐 Security Features
 
 ### **Authentication**
-- Secure session management
-- JWT tokens via Supabase
-- Auto-refresh token handling
+- Secure session management with Supabase Auth
+- JWT tokens with auto-refresh
+- Protected routes via middleware
+- Cookie-based session storage
 
 ### **Authorization**
-- Row Level Security (RLS)
-- User-scoped data access
-- Protected API routes
+- Row Level Security (RLS) policies
+- User-scoped data isolation
+- Protected API routes with auth checks
+- SECURITY DEFINER stored procedures
 
 ### **Data Protection**
 - Input validation and sanitization
-- SQL injection prevention
-- XSS protection
+- SQL injection prevention (parameterized queries)
+- XSS protection via Content Security Policy
+- Rate limiting to prevent API abuse (Token Bucket Algorithm)
+
+### **Transaction Safety**
+- **Atomic Operations:** Stored procedures ensure all-or-nothing transactions
+- **Row Locking:** `FOR UPDATE` prevents concurrent modification race conditions
+- **Balance Validation:** Insufficient balance checks before deduction
+- **Ownership Verification:** Multi-level user ownership checks
+
+---
+
+## 🗄️ Database Architecture
+
+### **Stored Procedures** (PostgreSQL PL/pgSQL)
+
+Finance Tracker menggunakan stored procedures untuk atomic transaction operations:
+
+#### **Functions:**
+1. `create_transaction()` - Create transaction dengan atomic balance update
+2. `update_transaction()` - Update transaction dengan balance recalculation
+3. `delete_transaction()` - Delete transaction dengan balance rollback
+
+#### **Key Features:**
+- ✅ **ACID Compliance** - All operations atomic, consistent, isolated, durable
+- ✅ **Row Locking** - `FOR UPDATE` prevents race conditions
+- ✅ **Auto Rollback** - Any error rolls back entire transaction
+- ✅ **Balance Validation** - Prevents negative balances
+- ✅ **Ownership Verification** - Multi-level security checks
+
+#### **Setup:**
+```sql
+-- 1. Drop existing functions (if any)
+DROP FUNCTION IF EXISTS create_transaction CASCADE;
+
+-- 2. Run supabase-stored-procedures.sql in Supabase SQL Editor
+
+-- 3. Refresh schema cache
+NOTIFY pgrst, 'reload schema';
+```
+
+📖 **See:** `DATABASE_SETUP.md` for complete setup guide and troubleshooting
+
+---
+
+## ⚡ Performance & Scalability
+
+### **Rate Limiting**
+Implemented custom rate limiting using Token Bucket Algorithm:
+
+```typescript
+// Presets
+- STRICT:  5 req/min  (for mutations: create, update, delete)
+- NORMAL:  30 req/min (for moderate operations)
+- RELAXED: 60 req/min (for read operations)
+```
+
+**Benefits:**
+- Prevents API abuse
+- Protects against DDoS attacks
+- Fair usage enforcement
+- Graceful degradation under load
+
+📖 **See:** `RATE_LIMITING_README.md` for implementation details
+
+### **Database Optimization**
+- Indexed columns: `accountId`, `categoryId`, `date`, `type`
+- Connection pooling via Supabase
+- Optimized queries with selective field fetching
+- Stored procedures reduce network round-trips
+
+📖 **See:** `SCALABILITY_ASSESSMENT.md` for Supabase free tier limits and optimization strategies
+
+---
 
 ## 🚀 Deployment
 
@@ -503,17 +580,19 @@ Ensure these are set in your deployment platform:
 - [x] Transaction categories
 - [x] API infrastructure
 
-### **Phase 2: Transaction Management** 🚧
-- [ ] Complete transaction CRUD
-- [ ] Account management
-- [ ] Transaction filtering and search
-- [ ] Bulk operations
+### **Phase 2: Transaction Management** ✅
+- [x] Complete transaction CRUD with stored procedures
+- [x] Account management with atomic balance updates
+- [x] Transaction validation (balance checks, ownership verification)
+- [x] Support for INCOME, EXPENSE, and TRANSFER types
+- [x] Rate limiting implementation
 
-### **Phase 3: Analytics & Insights** 📋
+### **Phase 3: Analytics & Insights** 🚧
 - [ ] Financial goals tracking
-- [ ] Spending analytics
+- [ ] Spending analytics with charts
 - [ ] Monthly/yearly reports
 - [ ] Budget management
+- [ ] Transaction history with advanced filtering
 
 ### **Phase 4: Advanced Features** 💡
 - [ ] Loan management
