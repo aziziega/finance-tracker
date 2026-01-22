@@ -10,10 +10,13 @@ import Footer from "@/components/footer";
 
 
 export const metadata: Metadata = {
-  title: 'LiatDuit - Manage Your Money Wisely',
+  title: 'LiatDuit - Manage Your Money!',
   description: 'Track expenses, manage wallets, and monitor your financial health with our intuitive finance tracking app.',
   keywords: ['finance', 'money', 'budget', 'expense tracker', 'wallet management', 'LiatDuit'],
   authors: [{ name: 'aziziega' }],
+  icons: {
+    icon: '/favicon.ico',
+  },
   openGraph: {
     title: 'LiatDuit',
     description: 'Personal Finance Management System',
@@ -22,7 +25,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'LiatDuit',
-    description: 'Manage Your Money Wisely',
+    description: 'Manage Your Money!',
   },
 }
 
@@ -49,7 +52,7 @@ export default function RootLayout({
             </AuthProvider>
           </SnowfallProvider>
           <Toaster position="top-right" />
-          <Footer/>
+          <Footer />
         </ThemeProvider>
       </body>
     </html >

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -15,6 +16,8 @@ import useAuth from '@/hooks/useAuth';
 export default function LoginPage() {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const { user, loading } = useAuth() || {};
     const router = useRouter();
 
@@ -22,7 +25,7 @@ export default function LoginPage() {
         e.preventDefault();
         const email: string = e.target[0]?.value;
         const password: string = e.target[1]?.value;
-        if (isSubmitting) return; 
+        if (isSubmitting) return;
         setIsSubmitting(true);
 
         try {
@@ -45,6 +48,30 @@ export default function LoginPage() {
         } catch (err) {
             toast.error('An unexpected error occurred');
             setIsSubmitting(false);
+        }
+    }
+
+    const handleGoogleSignIn = async () => {
+        if (isOAuthLoading) return;
+        setIsOAuthLoading(true);
+
+        try {
+            const supabase = createClient();
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/dashboard`,
+                }
+            });
+
+            if (error) {
+                toast.error('Google sign-in failed: ' + error.message);
+                setIsOAuthLoading(false);
+            }
+        } catch (err) {
+            console.error('Google OAuth error:', err);
+            toast.error('An unexpected error occurred');
+            setIsOAuthLoading(false);
         }
     }
 
@@ -108,16 +135,23 @@ export default function LoginPage() {
                                         </Link>
                                     </Button>
                                 </div>
-                                <Input
-                                    type="password"
-
-                                    name="password"
-                                    id="password"
-                                    className="input sz-md variant-mixed"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        id="password"
+                                        className="input sz-md variant-mixed pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
                             </div>
 
-                            <Button className="w-full" disabled={isSubmitting}>
+                            <Button className="w-full" disabled={isSubmitting || isOAuthLoading}>
                                 {isSubmitting ? 'Logging in...' : 'Login'}
                             </Button>
                         </div>
@@ -131,7 +165,9 @@ export default function LoginPage() {
                         <div className="grid grid-cols-2 gap-3">
                             <Button
                                 type="button"
-                                variant="outline">
+                                variant="outline"
+                                onClick={handleGoogleSignIn}
+                                disabled={isSubmitting || isOAuthLoading}>
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     width="0.98em"
@@ -150,11 +186,12 @@ export default function LoginPage() {
                                         fill="#eb4335"
                                         d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0C79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"></path>
                                 </svg>
-                                <span>Google</span>
+                                <span>{isOAuthLoading ? 'Loading...' : 'Google'}</span>
                             </Button>
                             <Button
                                 type="button"
-                                variant="outline">
+                                variant="outline"
+                                disabled>
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     width="1em"
